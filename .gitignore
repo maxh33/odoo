@@ -50,3 +50,19 @@ package.json
 /man/
 /share/
 /src/
+
+# Multi-tenant specific
+.env
+.env.local
+tenant_configs/*/secrets.conf
+/backups/
+/exports/
+
+# Docker volumes
+odoo_data/
+odoo_postgres_data/
+
+# Custom addon bytecode
+addons/multi_tenant_core/**/*.pyc
+addons/n8n_connector/**/*.pyc
+addons/tenant_templates/**/*.pyc

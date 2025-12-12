@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_tenant_config_manager,Tenant Config Manager,model_multi_tenant_config,group_multi_tenant_manager,1,1,1,1
+access_tenant_config_user,Tenant Config User,model_multi_tenant_config,group_multi_tenant_user,1,0,0,0
