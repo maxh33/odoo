@@ -1,0 +1,196 @@
+networks:
+  # Use existing shared monitoring network for VPS integration
+  monitoring_shared_monitoring_network:
+    external: true
+    name: monitoring_shared_monitoring_network
+  odoo_internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          ip_range: 172.19.1.0/24
+
+volumes:
+  odoo_data:
+    name: odoo_platform_data
+    driver: local
+  odoo_postgres_data:
+    name: odoo_platform_postgres
+    driver: local
+  odoo_addons:
+    name: odoo_platform_addons
+    driver: local
+  odoo_backups:
+    name: odoo_platform_backups
+    driver: local
+
+services:
+  # Dedicated PostgreSQL 15 for Odoo Multi-Tenant with Performance Optimization
+  odoo_postgres:
+    image: postgres:15-alpine
+    container_name: odoo_postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_DB: ${ODOO_MASTER_DB:-odoo_master}
+      POSTGRES_USER: ${ODOO_DB_USER:-odoo}
+      POSTGRES_PASSWORD: ${ODOO_DB_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: ${ODOO_TENANT_DATABASES:-tenant_jewelry_store_1,tenant_retail_shop_1}
+      # PostgreSQL Performance Tuning for VPS
+      POSTGRES_INITDB_ARGS: "--data-checksums --encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - odoo_postgres_data:/var/lib/postgresql/data
+      - ./configs/postgres/init-multi-tenant.sql:/docker-entrypoint-initdb.d/01-init-multi-tenant.sql:ro
+      - ./configs/postgres/create-tenant-dbs.sh:/docker-entrypoint-initdb.d/02-create-tenant-dbs.sh:ro
+      - ./configs/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - odoo_backups:/backups
+    networks:
+      - odoo_internal
+      - monitoring_shared_monitoring_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ODOO_DB_USER:-odoo} -d ${ODOO_MASTER_DB:-odoo_master}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c log_statement=all
+      -c log_destination=stderr
+      -c logging_collector=off
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=5432"
+      - "prometheus.path=/metrics"
+
+  # Odoo 18.0 Community Multi-Tenant with Performance Optimization
+  odoo:
+    image: odoo:18.0
+    container_name: odoo_community_18
+    restart: unless-stopped
+    depends_on:
+      odoo_postgres:
+        condition: service_healthy
+    environment:
+      # Official Docker environment variables approach
+      - HOST=odoo_postgres
+      - PORT=5432
+      - USER=${ODOO_DB_USER:-odoo}
+      - PASSWORD=${ODOO_DB_PASSWORD}
+
+      # Use environment variables instead of config file for main settings
+      - ODOO_RC=/etc/odoo/odoo.conf
+
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_addons:/mnt/extra-addons
+      - ./configs/odoo/odoo.conf:/etc/odoo/odoo.conf:ro
+      - ./addons/multi_tenant_core:/mnt/extra-addons/multi_tenant_core:ro
+      - ./addons/n8n_connector:/mnt/extra-addons/n8n_connector:ro
+      - ./addons/tenant_templates:/mnt/extra-addons/tenant_templates:ro
+      - ./addons/automation_workflows:/mnt/extra-addons/automation_workflows:ro
+      - ./addons/integration_modules:/mnt/extra-addons/integration_modules:ro
+
+    networks:
+      - odoo_internal
+      - monitoring_shared_monitoring_network
+
+    ports:
+      - "127.0.0.1:8069:8069"
+      - "127.0.0.1:8072:8072"  # For live chat/longpolling
+
+    entrypoint: []
+    command: ["python3", "/usr/bin/odoo", "-c", "/etc/odoo/odoo.conf"]
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.7'
+          memory: 1024M
+        reservations:
+          cpus: '0.3'
+          memory: 512M
+
+    # Temporarily disabled healthcheck while fixing HTTP server startup
+    # healthcheck:
+    #   test: ["CMD", "curl", "-f", "http://localhost:8069/web/health"]
+    #   interval: 30s
+    #   timeout: 15s
+    #   retries: 3
+    #   start_period: 180s
+
+    labels:
+      # Traefik Multi-Tenant Configuration for VPS Integration
+      - "traefik.enable=true"
+      - "traefik.docker.network=monitoring_shared_monitoring_network"
+
+      # Main Odoo Access
+      - "traefik.http.routers.odoo-main.rule=Host(`odoo.maxhaider.dev`)"
+      - "traefik.http.routers.odoo-main.entrypoints=websecure"
+      - "traefik.http.routers.odoo-main.tls=true"
+      - "traefik.http.routers.odoo-main.tls.certresolver=myresolver"
+      - "traefik.http.routers.odoo-main.priority=100"
+      - "traefik.http.routers.odoo-main.service=odoo-service"
+
+      # Tenant-specific routing
+      - "traefik.http.routers.odoo-tenant.rule=HostRegexp(`{tenant:[a-z0-9-]+}.odoo.maxhaider.dev`)"
+      - "traefik.http.routers.odoo-tenant.entrypoints=websecure"
+      - "traefik.http.routers.odoo-tenant.tls=true"
+      - "traefik.http.routers.odoo-tenant.tls.certresolver=myresolver"
+      - "traefik.http.routers.odoo-tenant.priority=90"
+      - "traefik.http.routers.odoo-tenant.service=odoo-service"
+
+      # API endpoints
+      - "traefik.http.routers.odoo-api.rule=Host(`api.odoo.maxhaider.dev`)"
+      - "traefik.http.routers.odoo-api.entrypoints=websecure"
+      - "traefik.http.routers.odoo-api.tls=true"
+      - "traefik.http.routers.odoo-api.tls.certresolver=myresolver"
+      - "traefik.http.routers.odoo-api.priority=80"
+      - "traefik.http.routers.odoo-api.service=odoo-service"
+
+      # Longpolling for live chat
+      - "traefik.http.routers.odoo-longpolling.rule=Host(`odoo.maxhaider.dev`) && PathPrefix(`/longpolling`)"
+      - "traefik.http.routers.odoo-longpolling.entrypoints=websecure"
+      - "traefik.http.routers.odoo-longpolling.tls=true"
+      - "traefik.http.routers.odoo-longpolling.service=odoo-longpolling-service"
+      - "traefik.http.routers.odoo-longpolling.priority=110"
+
+      # Load balancer services
+      - "traefik.http.services.odoo-service.loadbalancer.server.port=8069"
+      - "traefik.http.services.odoo-longpolling-service.loadbalancer.server.port=8072"
+
+      # Security Headers
+      - "traefik.http.middlewares.odoo-headers.headers.customRequestHeaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.odoo-headers.headers.customRequestHeaders.X-Real-IP="
+      - "traefik.http.middlewares.odoo-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.odoo-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.odoo-headers.headers.browserXssFilter=true"
+      - "traefik.http.routers.odoo-main.middlewares=odoo-headers"
+      - "traefik.http.routers.odoo-tenant.middlewares=odoo-headers"
+      - "traefik.http.routers.odoo-api.middlewares=odoo-headers"
+
+      # Monitoring Integration (VPS shared monitoring)
+      - "prometheus.scrape=true"
+      - "prometheus.port=8069"
+      - "prometheus.path=/web/health"
+      - "prometheus.interval=30s"
+
+      # Auto-updates
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.monitor-only=false"
+      - "com.centurylinklabs.watchtower.poll-interval=86400"
+
+      # Service identification
+      - "odoo.service=multi-tenant-platform"
+      - "odoo.version=18.0"
+      - "odoo.environment=production"

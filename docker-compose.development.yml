@@ -1,0 +1,49 @@
+# Docker Compose override for development environment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.development.yml up -d
+
+services:
+  odoo:
+    # Use development configuration
+    volumes:
+      - odoo_data:/var/lib/odoo
+      - odoo_addons:/mnt/extra-addons
+      - ./configs/odoo/odoo-development.conf:/etc/odoo/odoo.conf:ro
+      - ./addons/multi_tenant_core:/mnt/extra-addons/multi_tenant_core
+      - ./addons/n8n_connector:/mnt/extra-addons/n8n_connector
+      - ./addons/tenant_templates:/mnt/extra-addons/tenant_templates
+      - ./addons/automation_workflows:/mnt/extra-addons/automation_workflows
+      - ./addons/integration_modules:/mnt/extra-addons/integration_modules
+
+    # Development environment settings
+    environment:
+      - ODOO_BASE_URL=http://localhost:8069
+      - ENVIRONMENT=development
+      - DEBUG_MODE=True
+
+    # Remove production-specific labels
+    labels: []
+
+    # Development resource limits (more generous)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+
+  odoo_postgres:
+    # Development database settings
+    environment:
+      - POSTGRES_INITDB_ARGS=--data-checksums --encoding=UTF8
+
+    # Development resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+        reservations:
+          cpus: '0.2'
+          memory: 512M

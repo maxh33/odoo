@@ -1,0 +1,36 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main, staging]
+  workflow_dispatch:
+
+jobs:
+  phantom-raven-scan:
+    name: PhantomRaven NPM Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run PhantomRaven Scanner
+        id: scan
+        uses: maxh33/phantom-raven-npm-vulnerability-scanner@v1
+        with:
+          path: '.'
+          fail-on-critical: 'true'
+          output-file: 'security-report.json'
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: security-report.json
+          retention-days: 30

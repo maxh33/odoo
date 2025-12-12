@@ -1,0 +1,72 @@
+# Production Dockerfile for Odoo 18 Multi-Tenant Platform
+# Optimized for VPS deployment with custom addons and configurations
+
+FROM odoo:18.0
+
+# Set production environment
+ENV ODOO_RC=/etc/odoo/odoo.conf
+ENV PYTHONPATH="${PYTHONPATH}:/mnt/extra-addons"
+
+USER root
+
+# Install additional system dependencies for multi-tenant features
+RUN apt-get update && apt-get install -y \
+    # Additional Python packages for integrations
+    python3-pip \
+    # Network tools for debugging
+    curl \
+    wget \
+    netcat-openbsd \
+    # Git for addon management
+    git \
+    # Image processing for product images
+    libjpeg-dev \
+    libpng-dev \
+    # Additional locales for multi-tenant support
+    locales \
+    # Clean up
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Generate additional locales for international tenants
+RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
+    && sed -i '/pt_BR.UTF-8/s/^# //g' /etc/locale.gen \
+    && sed -i '/es_ES.UTF-8/s/^# //g' /etc/locale.gen \
+    && sed -i '/fr_FR.UTF-8/s/^# //g' /etc/locale.gen \
+    && locale-gen
+
+# Install additional Python packages for integrations
+COPY requirements.prod.txt /tmp/requirements.prod.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements.prod.txt
+
+# Copy custom addons with proper permissions
+COPY --chown=odoo:odoo addons/ /mnt/extra-addons/
+
+# Copy configuration files
+COPY --chown=odoo:odoo configs/odoo/odoo-production.conf /etc/odoo/odoo.conf
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /var/lib/odoo/filestore \
+    && mkdir -p /var/lib/odoo/sessions \
+    && mkdir -p /var/log/odoo \
+    && chown -R odoo:odoo /var/lib/odoo \
+    && chown -R odoo:odoo /var/log/odoo \
+    && chown -R odoo:odoo /mnt/extra-addons
+
+# Health check script
+COPY --chown=odoo:odoo scripts/health-check.sh /usr/local/bin/health-check.sh
+RUN chmod +x /usr/local/bin/health-check.sh
+
+# Switch back to odoo user for security
+USER odoo
+
+# Expose Odoo ports
+EXPOSE 8069 8072
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /usr/local/bin/health-check.sh
+
+# Production entrypoint that bypasses default entrypoint issues
+ENTRYPOINT []
+CMD ["python3", "/usr/bin/odoo", "-c", "/etc/odoo/odoo.conf"]

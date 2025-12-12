@@ -1,0 +1,161 @@
+networks:
+  monitoring_shared_monitoring_network:
+    external: true
+
+services:
+  odoo_postgres_prod:
+    image: postgres:15-alpine
+    container_name: odoo_postgres_prod
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${ODOO_DB_NAME:-odoo_master}
+      - POSTGRES_USER=${ODOO_DB_USER:-odoo}
+      - POSTGRES_PASSWORD=${ODOO_DB_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - odoo_postgres_data_prod:/var/lib/postgresql/data
+      - ./configs/postgres/init-multi-tenant.sql:/docker-entrypoint-initdb.d/init-multi-tenant.sql:ro
+    ports:
+      - "127.0.0.1:5433:5432"
+    networks:
+      - monitoring_shared_monitoring_network
+    hostname: odoo-postgres-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+        reservations:
+          cpus: '0.2'
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ODOO_DB_USER:-odoo} -d ${ODOO_DB_NAME:-odoo_master}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "prometheus.scrape=false"
+
+  odoo_community_18_prod:
+    image: ghcr.io/${GITHUB_USER}/odoo-multitenant:prod
+    container_name: odoo_community_18_prod
+    restart: unless-stopped
+    environment:
+      - ODOO_DB_HOST=odoo_postgres_prod
+      - ODOO_DB_PORT=5432
+      - ODOO_DB_USER=${ODOO_DB_USER:-odoo}
+      - ODOO_DB_PASSWORD=${ODOO_DB_PASSWORD}
+      - ODOO_DB_NAME=${ODOO_DB_NAME:-odoo_master}
+      - ODOO_ADMIN_PASSWORD=${ODOO_ADMIN_PASSWORD}
+      - ODOO_BASE_URL=${ODOO_BASE_URL:-https://odoo.maxhaider.dev}
+
+      # N8N Integration
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - N8N_API_KEY=${N8N_API_KEY}
+
+      # E-commerce Integration
+      - WOOCOMMERCE_API_KEY=${WOOCOMMERCE_API_KEY}
+      - WOOCOMMERCE_API_SECRET=${WOOCOMMERCE_API_SECRET}
+      - SHOPIFY_API_KEY=${SHOPIFY_API_KEY}
+      - SHOPIFY_API_SECRET=${SHOPIFY_API_SECRET}
+
+      # Gold Price API (for jewelry stores)
+      - GOLD_PRICE_API_KEY=${GOLD_PRICE_API_KEY}
+
+      # Email Configuration
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.zoho.com}
+      - EMAIL_PORT=587
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+
+      # Multi-tenant configuration
+      - TENANT_DOMAIN_PATTERN=${TENANT_DOMAIN_PATTERN:-{tenant}.odoo.maxhaider.dev}
+
+    labels:
+      # Traefik routing for main domain
+      - "traefik.enable=true"
+      - "traefik.http.routers.odoo-prod.rule=Host(`odoo.maxhaider.dev`)"
+      - "traefik.http.routers.odoo-prod.entrypoints=websecure"
+      - "traefik.http.routers.odoo-prod.tls=true"
+      - "traefik.http.routers.odoo-prod.tls.certresolver=myresolver"
+      - "traefik.http.services.odoo-prod.loadbalancer.server.port=8069"
+      - "traefik.http.routers.odoo-prod.priority=100"
+
+      # Multi-tenant subdomain routing
+      - "traefik.http.routers.odoo-tenant.rule=HostRegexp(`{tenant:[a-z0-9-]+}.odoo.maxhaider.dev`)"
+      - "traefik.http.routers.odoo-tenant.entrypoints=websecure"
+      - "traefik.http.routers.odoo-tenant.tls=true"
+      - "traefik.http.routers.odoo-tenant.tls.certresolver=myresolver"
+      - "traefik.http.services.odoo-tenant.loadbalancer.server.port=8069"
+      - "traefik.http.routers.odoo-tenant.priority=200"
+
+      # Health endpoint protection
+      - "traefik.http.routers.odoo-health.rule=Host(`odoo.maxhaider.dev`) && Path(`/web/health`)"
+      - "traefik.http.routers.odoo-health.middlewares=monitoring-auth"
+      - "traefik.http.routers.odoo-health.entrypoints=websecure"
+      - "traefik.http.routers.odoo-health.tls=true"
+      - "traefik.http.routers.odoo-health.tls.certresolver=myresolver"
+      - "traefik.http.routers.odoo-health.priority=300"
+
+      # Monitoring
+      - "prometheus.scrape=true"
+      - "prometheus.port=8069"
+      - "prometheus.path=/web/metrics"
+
+      # Watchtower auto-update
+      - "com.centurylinklabs.watchtower.enable=true"
+
+    ports:
+      - "127.0.0.1:8069:8069"
+      - "127.0.0.1:8072:8072"  # Longpolling port
+
+    hostname: odoo-community-18-prod
+
+    volumes:
+      - odoo_data_prod:/var/lib/odoo
+      - odoo_addons_prod:/mnt/extra-addons
+      - ./configs/odoo/odoo-production.conf:/etc/odoo/odoo.conf:ro
+
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+      - 8.8.4.4
+      - 1.0.0.1
+
+    extra_hosts:
+      - "smtp.zoho.com:202.177.16.133"
+      - "smtp.zoho.com:202.177.16.134"
+      - "n8n.maxhaider.dev:${VPS_HOST:-127.0.0.1}"
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 1024M
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8069/web/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    networks:
+      - monitoring_shared_monitoring_network
+
+    depends_on:
+      odoo_postgres_prod:
+        condition: service_healthy
+
+volumes:
+  odoo_postgres_data_prod:
+    driver: local
+  odoo_data_prod:
+    driver: local
+  odoo_addons_prod:
+    driver: local
