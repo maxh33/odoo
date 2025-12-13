@@ -66,3 +66,5 @@ odoo_postgres_data/
 addons/multi_tenant_core/**/*.pyc
 addons/n8n_connector/**/*.pyc
 addons/tenant_templates/**/*.pyc
+docker-compose.override.yml
+build.log
