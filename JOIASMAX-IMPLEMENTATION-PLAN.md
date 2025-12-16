@@ -174,7 +174,7 @@ JoiasMax operates a jewelry e-commerce business with **critical operational risk
 ┌─────────────────────────────────────────────────────────────────┐
 │                       N8N Automation                            │
 │                                                                 │
-│  Workflow 1: Gold Price Updater (Every 4 hours)                │
+│  Workflow 1: Gold Price Updater (Daily 5 AM, Weekdays)         │
 │    1. Fetch current gold price (Metals.dev API)                │
 │    2. Compare with joiasmax_market_prices                      │
 │    3. Calculate new prices for affected products               │
@@ -723,7 +723,7 @@ CREATE INDEX idx_price_history_sync ON joiasmax_price_history(synced_to_woocomme
 3. ✅ **Build N8N Workflows**
 
    **Workflow 1: Gold Price Automation** (See N8N section below for full JSON)
-   - Trigger: Cron (every 4 hours)
+   - Trigger: Cron (5 AM daily, Monday-Friday)
    - Nodes: HTTP Request → Data Transformation → Odoo Webhook → Telegram Notification
 
 4. ✅ **Testing N8N Integration**
@@ -993,13 +993,14 @@ CREATE INDEX idx_price_history_sync ON joiasmax_price_history(synced_to_woocomme
         "rule": {
           "interval": [
             {
-              "field": "hours",
-              "hoursInterval": 4
+              "field": "cronExpression",
+              "expression": "0 5 * * 1-5"
             }
           ]
-        }
+        },
+        "timezone": "America/Sao_Paulo"
       },
-      "name": "Every 4 Hours",
+      "name": "Daily at 5 AM (Weekdays)",
       "type": "n8n-nodes-base.scheduleTrigger",
       "position": [250, 300]
     },
@@ -1059,7 +1060,7 @@ CREATE INDEX idx_price_history_sync ON joiasmax_price_history(synced_to_woocomme
     }
   ],
   "connections": {
-    "Every 4 Hours": {
+    "Daily at 5 AM (Weekdays)": {
       "main": [[{"node": "Fetch Gold Price API", "type": "main", "index": 0}]]
     },
     "Fetch Gold Price API": {
@@ -1194,7 +1195,7 @@ python3 scripts/import_products.py --limit 100 --tenant test_jewelry
 
 ### Post-Implementation (Month 1)
 - ✅ **100% products** have real cost data (not R$ 0.00)
-- ✅ **Gold prices** updated 3-6x daily automatically
+- ✅ **Gold prices** updated daily (5 AM) on working days automatically
 - ✅ **<5% products** require manual review
 - ✅ **95%+ data quality** score
 - ✅ **<5 minutes** Odoo → WooCommerce sync time
