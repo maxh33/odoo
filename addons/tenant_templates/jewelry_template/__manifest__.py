@@ -42,35 +42,11 @@
         'stock',
     ],
     'data': [
-        # Security
-        'security/jewelry_security.xml',
-        'security/ir.model.access.csv',
-
-        # Data
-        'data/material_types.xml',
-        'data/metal_purities.xml',
-        'data/markup_rules.xml',
-
-        # Views
-        'views/product_template_views.xml',
-        'views/jewelry_pricing_views.xml',
-        'views/market_price_views.xml',
-        'views/supplier_cost_views.xml',
-        'views/price_history_views.xml',
-        'views/pricing_dashboard.xml',
-
-        # Menus
-        'views/menu_views.xml',
-
-        # Wizards
-        'wizards/bulk_price_update_views.xml',
-        'wizards/cost_estimation_views.xml',
+        # Note: Full implementation of views and security will be added in Week 1
+        # For now, only essential components are loaded to enable webhook testing
     ],
-    'demo': [
-        'demo/demo_products.xml',
-    ],
+    'demo': [],
     'installable': True,
     'application': True,
     'auto_install': False,
-    'post_init_hook': 'post_init_hook',
 }

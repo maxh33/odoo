@@ -78,12 +78,13 @@ CREATE INDEX IF NOT EXISTS idx_supplier_product ON joiasmax_supplier_costs(produ
 CREATE INDEX IF NOT EXISTS idx_price_history_product ON joiasmax_price_history(product_id);
 CREATE INDEX IF NOT EXISTS idx_price_history_date ON joiasmax_price_history(changed_at DESC);
 
--- Sample Market Price Data (Initial Values)
+-- Sample Market Price Data (Initial Values - Will be updated by N8N)
+-- These are approximate values as of Dec 2025 for initial setup only
+-- PRODUCTION: N8N workflow updates these automatically at 11 AM weekdays
 INSERT INTO joiasmax_market_prices (material_type, price_per_gram_brl, source_api) VALUES
-('gold_24k', 385.50, 'manual_initial'),
-('gold_18k', 289.13, 'manual_initial'),
-('silver_950', 4.50, 'manual_initial'),
-('diamond_1ct_vs1', 35000.00, 'manual_initial')
+('gold_24k', 750.00, 'coinbase_initial'),
+('gold_18k', 562.50, 'coinbase_calculated'),  -- 24k × 0.75
+('silver_950', 10.30, 'coinbase_calculated')   -- Pure silver × 0.95
 ON CONFLICT DO NOTHING;
 
 COMMENT ON TABLE joiasmax_product_pricing IS 'Jewelry-specific pricing data with material breakdown';
