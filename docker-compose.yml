@@ -95,9 +95,9 @@ services:
       - odoo_data:/var/lib/odoo
       - odoo_addons:/mnt/extra-addons
       - ./configs/odoo/odoo.conf:/etc/odoo/odoo.conf:ro
-      - ./addons/multi_tenant_core:/mnt/extra-addons/multi_tenant_core:ro
-      - ./addons/n8n_connector:/mnt/extra-addons/n8n_connector:ro
-      - ./addons/tenant_templates:/mnt/extra-addons/tenant_templates:ro
+      - ./addons/multi_tenant_core:/mnt/extra-addons/multi_tenant_core
+      - ./addons/n8n_connector:/mnt/extra-addons/n8n_connector
+      - ./addons/tenant_templates:/mnt/extra-addons/tenant_templates
       - ./addons/automation_workflows:/mnt/extra-addons/automation_workflows:ro
       - ./addons/integration_modules:/mnt/extra-addons/integration_modules:ro
 
