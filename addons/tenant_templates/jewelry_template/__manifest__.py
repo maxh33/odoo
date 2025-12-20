@@ -42,8 +42,7 @@
         'stock',
     ],
     'data': [
-        # Note: Full implementation of views and security will be added in Week 1
-        # For now, only essential components are loaded to enable webhook testing
+        'security/ir.model.access.csv',
     ],
     'demo': [],
     'installable': True,
