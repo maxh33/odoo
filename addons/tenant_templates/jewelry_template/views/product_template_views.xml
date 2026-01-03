@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Extend Product Form View - Add Jewelry Details Tab -->
+    <record id="product_template_jewelry_form_view" model="ir.ui.view">
+        <field name="name">product.template.jewelry.form</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+
+            <!-- Add Jewelry Checkbox in Header/Top -->
+            <xpath expr="//field[@name='categ_id']" position="after">
+                <field name="is_jewelry" widget="boolean_toggle"/>
+            </xpath>
+
+            <!-- Add Jewelry Details Tab Before Sales Tab -->
+            <xpath expr="//page[@name='sales']" position="before">
+                <page name="jewelry_details" string="Jewelry Details" invisible="not is_jewelry">
+
+                    <group name="jewelry_main_group">
+                        <group name="material_info" string="Material Information">
+                            <field name="material_type" required="is_jewelry"/>
+                            <field name="metal_weight_grams"/>
+                            <field name="metal_purity"/>
+                        </group>
+                    </group>
+
+                    <group name="jewelry_cost_group" string="Cost &amp; Pricing Information">
+                        <group name="computed_costs">
+                            <field name="material_cost_brl" readonly="1"/>
+                            <field name="total_cost_brl" readonly="1"/>
+                            <field name="margin_percentage" readonly="1" widget="percentage"/>
+                        </group>
+
+                        <group name="pricing_actions">
+                            <field name="jewelry_pricing_id" readonly="1"/>
+                            <button name="action_open_jewelry_pricing"
+                                    string="Open Pricing Details"
+                                    type="object"
+                                    class="btn-primary"
+                                    invisible="not jewelry_pricing_id"/>
+                            <button name="action_create_jewelry_pricing"
+                                    string="Create Pricing Record"
+                                    type="object"
+                                    class="btn-secondary"
+                                    invisible="jewelry_pricing_id"/>
+                        </group>
+                    </group>
+
+                    <separator string="Notes"/>
+                    <field name="description" placeholder="Jewelry-specific notes, craftsmanship details, etc..."/>
+
+                </page>
+            </xpath>
+
+            <!-- Add Jewelry Cost Information in General Tab (Optional - for quick visibility) -->
+            <xpath expr="//field[@name='list_price']" position="after">
+                <field name="material_cost_brl" invisible="not is_jewelry" readonly="1"/>
+                <field name="total_cost_brl" invisible="not is_jewelry" readonly="1"/>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Extend Product Tree View - Show Jewelry Indicator -->
+    <record id="product_template_jewelry_tree_view" model="ir.ui.view">
+        <field name="name">product.template.jewelry.tree</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="is_jewelry" widget="boolean_toggle"/>
+                <field name="material_type" optional="hide"/>
+                <field name="metal_weight_grams" optional="hide"/>
+                <field name="material_cost_brl" optional="show"/>
+                <field name="margin_percentage" optional="show" widget="percentage"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Jewelry Products - Filtered View -->
+    <record id="product_template_jewelry_only_tree" model="ir.ui.view">
+        <field name="name">product.template.jewelry.only.list</field>
+        <field name="model">product.template</field>
+        <field name="arch" type="xml">
+            <list string="Jewelry Products">
+                <field name="default_code" optional="show"/>
+                <field name="name"/>
+                <field name="material_type"/>
+                <field name="metal_weight_grams" optional="show"/>
+                <field name="metal_purity" optional="show"/>
+                <field name="material_cost_brl"/>
+                <field name="total_cost_brl"/>
+                <field name="list_price"/>
+                <field name="margin_percentage" widget="percentage"/>
+                <field name="qty_available" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Jewelry Products - Action -->
+    <record id="action_jewelry_products" model="ir.actions.act_window">
+        <field name="name">Jewelry Products</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('is_jewelry', '=', True)]</field>
+        <field name="context">{'default_is_jewelry': True}</field>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'list', 'view_id': ref('product_template_jewelry_only_tree')}),
+            (0, 0, {'view_mode': 'form', 'view_id': ref('product.product_template_only_form_view')})]"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first jewelry product
+            </p>
+            <p>
+                Jewelry products automatically calculate material costs based on current market prices for gold and silver.
+            </p>
+        </field>
+    </record>
+
+</odoo>

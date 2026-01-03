@@ -42,7 +42,19 @@
         'stock',
     ],
     'data': [
+        # Security - Load first
+        'security/jewelry_security.xml',
         'security/ir.model.access.csv',
+
+        # Views - Load in logical order
+        'views/product_template_views.xml',
+        'views/jewelry_pricing_views.xml',
+        'views/market_price_views.xml',
+        'views/supplier_cost_views.xml',
+        'views/price_history_views.xml',
+
+        # Menu - Load last
+        'views/menu_views.xml',
     ],
     'demo': [],
     'installable': True,

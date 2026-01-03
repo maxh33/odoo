@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ========================================= -->
+    <!-- Top Menu: JoiasMax Jewelry                -->
+    <!-- ========================================= -->
+
+    <menuitem id="menu_joiasmax_root"
+              name="JoiasMax Jewelry"
+              sequence="10"
+              web_icon="jewelry_template,static/description/icon.png"/>
+
+    <!-- ========================================= -->
+    <!-- Products Section                          -->
+    <!-- ========================================= -->
+
+    <menuitem id="menu_joiasmax_products"
+              name="Products"
+              parent="menu_joiasmax_root"
+              sequence="10"/>
+
+    <menuitem id="menu_jewelry_products"
+              name="Jewelry Products"
+              parent="menu_joiasmax_products"
+              action="action_jewelry_products"
+              sequence="10"/>
+
+    <menuitem id="menu_jewelry_pricing"
+              name="Jewelry Pricing"
+              parent="menu_joiasmax_products"
+              action="action_jewelry_pricing"
+              sequence="20"/>
+
+    <menuitem id="menu_supplier_costs"
+              name="Supplier Costs"
+              parent="menu_joiasmax_products"
+              action="action_supplier_cost"
+              sequence="30"/>
+
+    <!-- ========================================= -->
+    <!-- Market Data Section                       -->
+    <!-- ========================================= -->
+
+    <menuitem id="menu_joiasmax_market"
+              name="Market Data"
+              parent="menu_joiasmax_root"
+              sequence="20"/>
+
+    <menuitem id="menu_market_prices"
+              name="Market Prices"
+              parent="menu_joiasmax_market"
+              action="action_market_price"
+              sequence="10"/>
+
+    <!-- ========================================= -->
+    <!-- Reports Section                           -->
+    <!-- ========================================= -->
+
+    <menuitem id="menu_joiasmax_reports"
+              name="Reports"
+              parent="menu_joiasmax_root"
+              sequence="30"/>
+
+    <menuitem id="menu_price_history"
+              name="Price History"
+              parent="menu_joiasmax_reports"
+              action="action_price_history"
+              sequence="10"/>
+
+    <!-- ========================================= -->
+    <!-- Configuration Section (Admin Only)        -->
+    <!-- ========================================= -->
+
+    <menuitem id="menu_joiasmax_config"
+              name="Configuration"
+              parent="menu_joiasmax_root"
+              sequence="90"
+              groups="base.group_system"/>
+
+    <!-- Submenu: Re-link to Market Prices for admin access -->
+    <menuitem id="menu_market_prices_config"
+              name="Market Price Settings"
+              parent="menu_joiasmax_config"
+              action="action_market_price"
+              sequence="10"/>
+
+</odoo>

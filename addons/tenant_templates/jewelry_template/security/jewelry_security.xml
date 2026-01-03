@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ========================================= -->
+        <!-- Multi-Tenant Isolation - Record Rules    -->
+        <!-- ========================================= -->
+
+        <!-- Rule: Jewelry Pricing - Tenant Isolation -->
+        <record id="jewelry_pricing_tenant_rule" model="ir.rule">
+            <field name="name">Jewelry Pricing: Multi-tenant Isolation</field>
+            <field name="model_id" ref="model_joiasmax_jewelry_pricing"/>
+            <field name="domain_force">[('tenant_id', '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule: Market Price - Global Access (All Tenants) -->
+        <record id="market_price_global_rule" model="ir.rule">
+            <field name="name">Market Price: Global Access</field>
+            <field name="model_id" ref="model_joiasmax_market_price"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule: Market Price - Manager Write Access -->
+        <record id="market_price_manager_rule" model="ir.rule">
+            <field name="name">Market Price: Manager Access</field>
+            <field name="model_id" ref="model_joiasmax_market_price"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_system'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule: Supplier Cost - Tenant Isolation -->
+        <record id="supplier_cost_tenant_rule" model="ir.rule">
+            <field name="name">Supplier Cost: Multi-tenant Isolation</field>
+            <field name="model_id" ref="model_joiasmax_supplier_cost"/>
+            <field name="domain_force">[('tenant_id', '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <!-- Rule: Price History - Tenant Isolation (Read Only for Users) -->
+        <record id="price_history_user_rule" model="ir.rule">
+            <field name="name">Price History: User Read Access</field>
+            <field name="model_id" ref="model_joiasmax_price_history"/>
+            <field name="domain_force">[('tenant_id', '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Rule: Price History - Manager Access -->
+        <record id="price_history_manager_rule" model="ir.rule">
+            <field name="name">Price History: Manager Access</field>
+            <field name="model_id" ref="model_joiasmax_price_history"/>
+            <field name="domain_force">[('tenant_id', '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('base.group_system'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- ========================================= -->
+        <!-- Product Template - Jewelry Filter         -->
+        <!-- ========================================= -->
+
+        <!-- No special record rules for product.template needed -->
+        <!-- Jewelry products are filtered by is_jewelry field in views -->
+
+    </data>
+</odoo>

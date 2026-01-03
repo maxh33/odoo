@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 import logging
 
@@ -109,4 +109,34 @@ class JoiasmaxMarketPrice(models.Model):
             'status': 'success',
             'updated': ['gold_24k', 'silver_950'],
             'timestamp': fields.Datetime.now().isoformat()
+        }
+
+    def action_activate(self):
+        """Activate this market price (deactivates others of the same type)"""
+        self.ensure_one()
+        # Deactivate all other prices of the same material type
+        self.search([('material_type', '=', self.material_type), ('id', '!=', self.id)]).write({'is_active': False})
+        # Activate this price
+        self.write({'is_active': True})
+        return True
+
+    def action_deactivate(self):
+        """Deactivate this market price"""
+        self.ensure_one()
+        self.write({'is_active': False})
+        return True
+
+    def action_fetch_current_price(self):
+        """Placeholder for fetching current market price from external API"""
+        self.ensure_one()
+        # TODO: Implement actual API integration in future
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Fetch Price'),
+                'message': _('Manual price fetch is not yet implemented. Prices are updated via N8N automation.'),
+                'type': 'info',
+                'sticky': False,
+            }
         }
