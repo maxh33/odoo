@@ -68,3 +68,19 @@ addons/n8n_connector/**/*.pyc
 addons/tenant_templates/**/*.pyc
 docker-compose.override.yml
 build.log
+
+# Ignore temporary scripts at the root
+/check_relationships.py
+/final_test.py
+/grant_permissions.py
+/link_pricing_records.py
+/read_excel_sample.py
+/recompute_costs.py
+/test_complete_flow.py
+/test_price_update.py
+/trigger_recalc.py
+/verify_prices.py
+
+# Ignore product data exports
+/addons/tenant_templates/products/
+
