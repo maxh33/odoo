@@ -105,9 +105,25 @@ class JoiasmaxMarketPrice(models.Model):
                 'is_active': True
             })
 
+        # Trigger product price recalculation for all jewelry items
+        # This runs in sudo mode so N8N user doesn't need product.template write access
+        pricing_model = self.env['joiasmax.jewelry.pricing'].sudo()
+        all_pricing_records = pricing_model.search([('product_id', '!=', False)])
+
+        updated_products = 0
+        for pricing in all_pricing_records:
+            # Force recomputation by writing to a dependent field (triggers @api.depends)
+            # Writing material_type with its own value triggers _compute_material_cost
+            pricing.write({'material_type': pricing.material_type})
+
+            # Sync updated prices to products
+            pricing.action_sync_to_product()
+            updated_products += 1
+
         return {
             'status': 'success',
             'updated': ['gold_24k', 'silver_950'],
+            'products_updated': updated_products,
             'timestamp': fields.Datetime.now().isoformat()
         }
 

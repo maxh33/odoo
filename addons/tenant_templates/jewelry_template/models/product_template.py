@@ -61,7 +61,7 @@ class ProductTemplate(models.Model):
         help='Profit margin percentage'
     )
 
-    @api.depends('jewelry_pricing_id.material_cost_brl', 'jewelry_pricing_id.total_cost_brl', 'list_price')
+    @api.depends('jewelry_pricing_id', 'jewelry_pricing_id.material_cost_brl', 'jewelry_pricing_id.total_cost_brl', 'list_price')
     def _compute_jewelry_costs(self):
         """Compute jewelry costs from linked pricing record"""
         for product in self:
