@@ -84,3 +84,10 @@ build.log
 # Ignore product data exports
 /addons/tenant_templates/products/
 
+# Import generated reports and validation files
+addons/tenant_templates/jewelry_template/import/VALIDATION_SUMMARY.md
+addons/tenant_templates/jewelry_template/import/reports/
+addons/tenant_templates/jewelry_template/import/*.csv
+
+# Supplier pricing indices (sensitive data)
+addons/tenant_templates/supplier/
