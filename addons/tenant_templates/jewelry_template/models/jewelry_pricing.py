@@ -94,6 +94,15 @@ class JewelryPricing(models.Model):
         help='If checked, manual price will be used instead of calculated'
     )
 
+    # Provider pricing factor
+    provider_indice = fields.Float(
+        string='Provider Index Factor',
+        digits=(5, 2),
+        default=1.0,
+        help='Provider-specific pricing factor that adjusts for production costs and rarity. '
+             'Default 1.0. User provides real values per product type.'
+    )
+
     final_price_brl = fields.Float(
         string='Final Price (R$)',
         compute='_compute_final_price',
@@ -135,15 +144,15 @@ class JewelryPricing(models.Model):
         '950': 0.95,    # Silver 950
     }
 
-    @api.depends('metal_weight_grams', 'metal_purity', 'material_type')
+    @api.depends('metal_weight_grams', 'metal_purity', 'material_type', 'provider_indice')
     def _compute_material_cost(self):
-        """Calculate material cost based on weight, purity, and market price"""
+        """Calculate material cost based on weight, purity, market price, and provider indice"""
         for record in self:
             if not record.metal_weight_grams or not record.metal_purity or not record.material_type:
                 record.material_cost_brl = 0.0
                 continue
 
-            # Get market price
+            # Get market price (always 24k for gold, 950 for silver)
             market_price = record._get_market_price(record.material_type, record.metal_purity)
 
             if not market_price:
@@ -156,10 +165,19 @@ class JewelryPricing(models.Model):
             # Get purity factor
             purity_factor = record._get_purity_factor(record.metal_purity)
 
-            # Calculate: weight × market_price × purity_factor
-            material_cost = record.metal_weight_grams * market_price * purity_factor
+            # Get provider indice (default 1.0)
+            indice = record.provider_indice or 1.0
+
+            # Calculate: weight × market_price × purity_factor × provider_indice
+            # Note: For gold, purity_factor is 1.0 (always use 24k price)
+            # Provider indice adjusts for production costs and product type (e.g., 1.10 for 18k products)
+            material_cost = record.metal_weight_grams * market_price * purity_factor * indice
 
             record.material_cost_brl = material_cost
+
+            # Auto-sync material cost to product's standard_price field
+            if record.product_id and material_cost > 0:
+                record.product_id.write({'standard_price': material_cost})
 
             # Store market prices for audit trail
             if record.material_type == 'gold':
@@ -236,9 +254,13 @@ class JewelryPricing(models.Model):
 
             old_price = record.product_id.list_price
             new_price = record.final_price_brl
+            new_cost = record.material_cost_brl  # Material cost for product Cost field
 
-            # Update product price
-            record.product_id.write({'list_price': new_price})
+            # Update product price and cost
+            record.product_id.write({
+                'list_price': new_price,
+                'standard_price': new_cost,  # Sync material cost to product Cost field
+            })
 
             # Log to price history if price changed
             if abs(old_price - new_price) > 0.01:  # Avoid logging tiny differences

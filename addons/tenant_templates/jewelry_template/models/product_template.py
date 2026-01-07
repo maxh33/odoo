@@ -61,6 +61,21 @@ class ProductTemplate(models.Model):
         help='Profit margin percentage'
     )
 
+    # Size-based pricing fields (for rings with CPL weight adjustment table)
+    has_size_based_pricing = fields.Boolean(
+        string='Use Size-Based Pricing',
+        default=False,
+        help='Enable automatic weight/price calculation for ring sizes using CPL adjustment table'
+    )
+
+    size_pricing_coef = fields.Float(
+        string='Size Pricing Coefficient',
+        default=1.0,
+        digits=(4, 2),
+        help='Production coefficient for size-based pricing (e.g., 1.15 for CPL supplier rings). '
+             'Formula: final_weight = base_weight × COEF × size_adjustment_factor'
+    )
+
     @api.depends('jewelry_pricing_id', 'jewelry_pricing_id.material_cost_brl', 'jewelry_pricing_id.total_cost_brl', 'list_price')
     def _compute_jewelry_costs(self):
         """Compute jewelry costs from linked pricing record"""

@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- CPL Ring Size Weight Adjustment Table -->
+        <!-- Formula: final_weight = base_weight × COEF × adjustment_factor -->
+        <!-- Reference size: 20 (factor = 1.0000) -->
+
+        <record id="size_adj_1" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">1</field>
+            <field name="adjustment_factor">0.6833</field>
+        </record>
+
+        <record id="size_adj_2" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">2</field>
+            <field name="adjustment_factor">0.7000</field>
+        </record>
+
+        <record id="size_adj_3" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">3</field>
+            <field name="adjustment_factor">0.7166</field>
+        </record>
+
+        <record id="size_adj_4" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">4</field>
+            <field name="adjustment_factor">0.7333</field>
+        </record>
+
+        <record id="size_adj_5" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">5</field>
+            <field name="adjustment_factor">0.7500</field>
+        </record>
+
+        <record id="size_adj_6" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">6</field>
+            <field name="adjustment_factor">0.7666</field>
+        </record>
+
+        <record id="size_adj_7" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">7</field>
+            <field name="adjustment_factor">0.7833</field>
+        </record>
+
+        <record id="size_adj_8" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">8</field>
+            <field name="adjustment_factor">0.8000</field>
+        </record>
+
+        <record id="size_adj_9" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">9</field>
+            <field name="adjustment_factor">0.8166</field>
+        </record>
+
+        <record id="size_adj_10" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">10</field>
+            <field name="adjustment_factor">0.8333</field>
+        </record>
+
+        <record id="size_adj_11" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">11</field>
+            <field name="adjustment_factor">0.8500</field>
+        </record>
+
+        <record id="size_adj_12" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">12</field>
+            <field name="adjustment_factor">0.8666</field>
+        </record>
+
+        <record id="size_adj_13" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">13</field>
+            <field name="adjustment_factor">0.8833</field>
+        </record>
+
+        <record id="size_adj_14" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">14</field>
+            <field name="adjustment_factor">0.9000</field>
+        </record>
+
+        <record id="size_adj_15" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">15</field>
+            <field name="adjustment_factor">0.9166</field>
+        </record>
+
+        <record id="size_adj_16" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">16</field>
+            <field name="adjustment_factor">0.9333</field>
+        </record>
+
+        <record id="size_adj_17" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">17</field>
+            <field name="adjustment_factor">0.9500</field>
+        </record>
+
+        <record id="size_adj_18" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">18</field>
+            <field name="adjustment_factor">0.9666</field>
+        </record>
+
+        <record id="size_adj_19" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">19</field>
+            <field name="adjustment_factor">0.9833</field>
+        </record>
+
+        <record id="size_adj_20" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">20</field>
+            <field name="adjustment_factor">1.0000</field>
+        </record>
+
+        <record id="size_adj_21" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">21</field>
+            <field name="adjustment_factor">1.0166</field>
+        </record>
+
+        <record id="size_adj_22" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">22</field>
+            <field name="adjustment_factor">1.0333</field>
+        </record>
+
+        <record id="size_adj_23" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">23</field>
+            <field name="adjustment_factor">1.0500</field>
+        </record>
+
+        <record id="size_adj_24" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">24</field>
+            <field name="adjustment_factor">1.0666</field>
+        </record>
+
+        <record id="size_adj_25" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">25</field>
+            <field name="adjustment_factor">1.0833</field>
+        </record>
+
+        <record id="size_adj_26" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">26</field>
+            <field name="adjustment_factor">1.1000</field>
+        </record>
+
+        <record id="size_adj_27" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">27</field>
+            <field name="adjustment_factor">1.1166</field>
+        </record>
+
+        <record id="size_adj_28" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">28</field>
+            <field name="adjustment_factor">1.1333</field>
+        </record>
+
+        <record id="size_adj_29" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">29</field>
+            <field name="adjustment_factor">1.1500</field>
+        </record>
+
+        <record id="size_adj_30" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">30</field>
+            <field name="adjustment_factor">1.1666</field>
+        </record>
+
+        <record id="size_adj_31" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">31</field>
+            <field name="adjustment_factor">1.1833</field>
+        </record>
+
+        <record id="size_adj_32" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">32</field>
+            <field name="adjustment_factor">1.2000</field>
+        </record>
+
+        <record id="size_adj_33" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">33</field>
+            <field name="adjustment_factor">1.2166</field>
+        </record>
+
+        <record id="size_adj_34" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">34</field>
+            <field name="adjustment_factor">1.2333</field>
+        </record>
+
+        <record id="size_adj_35" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">35</field>
+            <field name="adjustment_factor">1.2500</field>
+        </record>
+
+        <record id="size_adj_36" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">36</field>
+            <field name="adjustment_factor">1.2666</field>
+        </record>
+
+        <record id="size_adj_37" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">37</field>
+            <field name="adjustment_factor">1.2833</field>
+        </record>
+
+        <record id="size_adj_38" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">38</field>
+            <field name="adjustment_factor">1.3000</field>
+        </record>
+
+        <record id="size_adj_39" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">39</field>
+            <field name="adjustment_factor">1.3166</field>
+        </record>
+
+        <record id="size_adj_40" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">40</field>
+            <field name="adjustment_factor">1.3333</field>
+        </record>
+
+        <record id="size_adj_41" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">41</field>
+            <field name="adjustment_factor">1.3500</field>
+        </record>
+
+        <record id="size_adj_42" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">42</field>
+            <field name="adjustment_factor">1.3666</field>
+        </record>
+
+        <record id="size_adj_43" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">43</field>
+            <field name="adjustment_factor">1.3833</field>
+        </record>
+
+        <record id="size_adj_44" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">44</field>
+            <field name="adjustment_factor">1.4000</field>
+        </record>
+
+        <record id="size_adj_45" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">45</field>
+            <field name="adjustment_factor">1.4166</field>
+        </record>
+
+        <record id="size_adj_46" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">46</field>
+            <field name="adjustment_factor">1.4333</field>
+        </record>
+
+        <record id="size_adj_47" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">47</field>
+            <field name="adjustment_factor">1.4500</field>
+        </record>
+
+        <record id="size_adj_48" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">48</field>
+            <field name="adjustment_factor">1.4666</field>
+        </record>
+
+        <record id="size_adj_49" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">49</field>
+            <field name="adjustment_factor">1.4833</field>
+        </record>
+
+        <record id="size_adj_50" model="joiasmax.size.weight.adjustment">
+            <field name="size_number">50</field>
+            <field name="adjustment_factor">1.5000</field>
+        </record>
+
+    </data>
+</odoo>

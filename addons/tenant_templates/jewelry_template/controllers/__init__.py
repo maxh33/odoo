@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-# Empty controllers directory
+from . import pricing_webhook

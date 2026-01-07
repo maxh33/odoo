@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Jewelry Template - JoiasMax',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.1.0',
     'category': 'Sales',
     'summary': 'Jewelry store template with dynamic pricing for gold/silver products',
     'description': """
@@ -45,6 +45,9 @@
         # Security - Load first
         'security/jewelry_security.xml',
         'security/ir.model.access.csv',
+
+        # Data - Load before views
+        'data/size_weight_adjustments.xml',
 
         # Views - Load in logical order
         'views/product_template_views.xml',
