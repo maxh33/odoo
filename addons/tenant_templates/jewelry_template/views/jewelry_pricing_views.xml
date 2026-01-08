@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Jewelry Pricing Form View -->
+    <record id="view_jewelry_pricing_form" model="ir.ui.view">
+        <field name="name">joiasmax.jewelry.pricing.form</field>
+        <field name="model">joiasmax.jewelry.pricing</field>
+        <field name="arch" type="xml">
+            <form string="Jewelry Pricing">
+                <header>
+                    <button name="action_recalculate_costs"
+                            string="Recalculate Costs"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_sync_to_product"
+                            string="Sync to Product"
+                            type="object"
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_product"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-cubes">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">View Product</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="product_id" class="oe_edit_only"/>
+                        <h1>
+                            <field name="product_id" placeholder="Select Product..."/>
+                        </h1>
+                    </div>
+
+                    <group name="main_group">
+                        <!-- Material Information (Related Fields) -->
+                        <group name="material_info" string="Material Information">
+                            <field name="material_type" readonly="1"/>
+                            <field name="metal_weight_grams" readonly="1"/>
+                            <field name="metal_purity" readonly="1"/>
+                        </group>
+
+                        <!-- Pricing Strategy -->
+                        <group name="pricing_strategy" string="Pricing Strategy">
+                            <field name="markup_percentage"/>
+                            <field name="use_manual_override"/>
+                            <field name="manual_override_price_brl" invisible="not use_manual_override" required="use_manual_override"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Cost Breakdown Tab -->
+                        <page name="cost_breakdown" string="Cost Breakdown">
+                            <group name="costs">
+                                <group name="material_costs" string="Material Costs (Provider indice includes production)">
+                                    <field name="material_cost_brl" readonly="1"/>
+                                    <field name="gold_price_at_calculation" readonly="1" invisible="material_type != 'gold'"/>
+                                    <field name="silver_price_at_calculation" readonly="1" invisible="material_type != 'silver'"/>
+                                    <field name="total_cost_brl" readonly="1" class="oe_subtotal_footer_separator"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Pricing Calculation Tab -->
+                        <page name="pricing_calc" string="Pricing Calculation">
+                            <group name="price_calc">
+                                <group name="calculated" string="Calculated Price">
+                                    <field name="total_cost_brl" readonly="1"/>
+                                    <field name="markup_percentage" readonly="1"/>
+                                    <field name="calculated_price_brl" readonly="1" class="oe_subtotal_footer_separator"/>
+                                </group>
+
+                                <group name="final" string="Final Price">
+                                    <field name="use_manual_override" readonly="1"/>
+                                    <field name="manual_override_price_brl" readonly="1" invisible="not use_manual_override"/>
+                                    <field name="final_price_brl" readonly="1" class="oe_subtotal_footer_separator" widget="monetary"/>
+                                </group>
+                            </group>
+
+                            <group name="sync_info">
+                                <group string="Sync Information">
+                                    <field name="last_cost_update" readonly="1"/>
+                                    <field name="last_sync_to_product" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <!-- Notes Tab -->
+                        <page name="notes" string="Notes">
+                            <field name="notes" placeholder="Pricing notes, special considerations, etc..."/>
+                        </page>
+
+                    </notebook>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Jewelry Pricing List View -->
+    <record id="view_jewelry_pricing_tree" model="ir.ui.view">
+        <field name="name">joiasmax.jewelry.pricing.list</field>
+        <field name="model">joiasmax.jewelry.pricing</field>
+        <field name="arch" type="xml">
+            <list string="Jewelry Pricing">
+                <field name="product_id"/>
+                <field name="material_type"/>
+                <field name="metal_weight_grams" optional="show"/>
+                <field name="material_cost_brl" sum="Total Material Cost"/>
+                <field name="total_cost_brl" sum="Total Cost"/>
+                <field name="markup_percentage" optional="show"/>
+                <field name="calculated_price_brl" optional="show"/>
+                <field name="use_manual_override" optional="hide"/>
+                <field name="final_price_brl" sum="Total Final Price"/>
+                <field name="last_cost_update" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Jewelry Pricing Search View -->
+    <record id="view_jewelry_pricing_search" model="ir.ui.view">
+        <field name="name">joiasmax.jewelry.pricing.search</field>
+        <field name="model">joiasmax.jewelry.pricing</field>
+        <field name="arch" type="xml">
+            <search string="Jewelry Pricing">
+                <field name="product_id" string="Product"/>
+                <field name="material_type"/>
+                <field name="metal_purity"/>
+
+                <filter name="gold_products" string="Gold Products"
+                        domain="[('material_type', '=', 'gold')]"/>
+                <filter name="silver_products" string="Silver Products"
+                        domain="[('material_type', '=', 'silver')]"/>
+                <filter name="manual_override" string="Manual Override"
+                        domain="[('use_manual_override', '=', True)]"/>
+
+                <separator/>
+                <filter name="recent_update" string="Recently Updated"
+                        domain="[('last_cost_update', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+
+                <group expand="0" string="Group By">
+                    <filter name="group_material_type" string="Material Type" context="{'group_by': 'material_type'}"/>
+                    <filter name="group_metal_purity" string="Metal Purity" context="{'group_by': 'metal_purity'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Jewelry Pricing Action -->
+    <record id="action_jewelry_pricing" model="ir.actions.act_window">
+        <field name="name">Jewelry Pricing</field>
+        <field name="res_model">joiasmax.jewelry.pricing</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create jewelry pricing record
+            </p>
+            <p>
+                Pricing records automatically calculate material costs based on current gold and silver market prices.
+            </p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Multi-Tenant Manager Group -->
+        <record id="group_multi_tenant_manager" model="res.groups">
+            <field name="name">Multi-Tenant Manager</field>
+            <field name="category_id" ref="base.module_category_administration"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_system'))]"/>
+        </record>
+
+        <!-- Multi-Tenant User Group -->
+        <record id="group_multi_tenant_user" model="res.groups">
+            <field name="name">Multi-Tenant User</field>
+            <field name="category_id" ref="base.module_category_administration"/>
+        </record>
+
+        <!-- Tenant Configuration Access Rules -->
+        <record id="tenant_config_rule_manager" model="ir.rule">
+            <field name="name">Tenant Config: Manager Access</field>
+            <field name="model_id" ref="model_multi_tenant_config"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('group_multi_tenant_manager'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="True"/>
+            <field name="perm_create" eval="True"/>
+            <field name="perm_unlink" eval="True"/>
+        </record>
+
+        <record id="tenant_config_rule_user" model="ir.rule">
+            <field name="name">Tenant Config: User Access</field>
+            <field name="model_id" ref="model_multi_tenant_config"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+            <field name="groups" eval="[(4, ref('group_multi_tenant_user'))]"/>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+    </data>
+</odoo>

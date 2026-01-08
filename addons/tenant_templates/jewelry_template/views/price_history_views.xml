@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Price History Form View (Read-Only) -->
+    <record id="view_price_history_form" model="ir.ui.view">
+        <field name="name">joiasmax.price.history.form</field>
+        <field name="model">joiasmax.price.history</field>
+        <field name="arch" type="xml">
+            <form string="Price History" create="false" edit="false" delete="false">
+                <header>
+                    <button name="action_mark_synced"
+                            string="Mark as Synced"
+                            type="object"
+                            class="btn-primary"
+                            invisible="synced_to_woocommerce"/>
+                    <field name="synced_to_woocommerce" widget="statusbar" statusbar_visible="not_synced,synced"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_product"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-cubes">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">View Product</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="product_id" class="oe_edit_only"/>
+                        <h1>
+                            <field name="product_id"/>
+                        </h1>
+                    </div>
+
+                    <group name="main_group">
+                        <group name="price_change" string="Price Change">
+                            <field name="old_price_brl" widget="monetary"/>
+                            <field name="new_price_brl" widget="monetary"/>
+                            <field name="price_difference_brl" widget="monetary"/>
+                            <field name="price_change_percentage" widget="percentage"/>
+                        </group>
+
+                        <group name="change_context" string="Change Context">
+                            <field name="change_reason"/>
+                            <field name="changed_at"/>
+                            <field name="changed_by_user_id"/>
+                        </group>
+                    </group>
+
+                    <group name="market_context" string="Market Context at Change">
+                        <group>
+                            <field name="gold_price_at_change"/>
+                            <field name="silver_price_at_change"/>
+                            <field name="exchange_rate_at_change"/>
+                        </group>
+                    </group>
+
+                    <group name="sync_info" string="Synchronization">
+                        <group>
+                            <field name="synced_to_woocommerce"/>
+                            <field name="synced_at"/>
+                            <field name="sync_error" widget="text"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page name="notes" string="Notes">
+                            <field name="change_notes" widget="text"/>
+                        </page>
+                    </notebook>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Price History List View -->
+    <record id="view_price_history_tree" model="ir.ui.view">
+        <field name="name">joiasmax.price.history.list</field>
+        <field name="model">joiasmax.price.history</field>
+        <field name="arch" type="xml">
+            <list string="Price History"
+                  decoration-success="price_difference_brl &gt; 0"
+                  decoration-danger="price_difference_brl &lt; 0"
+                  create="false"
+                  edit="false"
+                  delete="false">
+                <field name="changed_at"/>
+                <field name="product_id"/>
+                <field name="old_price_brl" widget="monetary"/>
+                <field name="new_price_brl" widget="monetary"/>
+                <field name="price_difference_brl" widget="monetary"/>
+                <field name="price_change_percentage" widget="percentage"/>
+                <field name="change_reason"/>
+                <field name="changed_by_user_id" optional="show"/>
+                <field name="gold_price_at_change" optional="hide"/>
+                <field name="silver_price_at_change" optional="hide"/>
+                <field name="synced_to_woocommerce" widget="boolean_toggle" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Price History Search View -->
+    <record id="view_price_history_search" model="ir.ui.view">
+        <field name="name">joiasmax.price.history.search</field>
+        <field name="model">joiasmax.price.history</field>
+        <field name="arch" type="xml">
+            <search string="Price History">
+                <field name="product_id"/>
+                <field name="changed_by_user_id"/>
+                <field name="change_reason"/>
+
+                <filter name="price_increase" string="Price Increase"
+                        domain="[('price_difference_brl', '&gt;', 0)]"/>
+                <filter name="price_decrease" string="Price Decrease"
+                        domain="[('price_difference_brl', '&lt;', 0)]"/>
+
+                <separator/>
+                <filter name="market_price_update" string="Market Price Updates"
+                        domain="[('change_reason', '=', 'market_price_update')]"/>
+                <filter name="manual_adjustment" string="Manual Adjustments"
+                        domain="[('change_reason', '=', 'manual_adjustment')]"/>
+
+                <separator/>
+                <filter name="synced" string="Synced to WooCommerce"
+                        domain="[('synced_to_woocommerce', '=', True)]"/>
+                <filter name="not_synced" string="Not Synced"
+                        domain="[('synced_to_woocommerce', '=', False)]"/>
+
+                <separator/>
+                <filter name="today" string="Today"
+                        domain="[('changed_at', '&gt;=', context_today())]"/>
+                <filter name="this_week" string="This Week"
+                        domain="[('changed_at', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="this_month" string="This Month"
+                        domain="[('changed_at', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
+
+                <group expand="0" string="Group By">
+                    <filter name="group_product" string="Product" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_reason" string="Change Reason" context="{'group_by': 'change_reason'}"/>
+                    <filter name="group_user" string="Changed By" context="{'group_by': 'changed_by_user_id'}"/>
+                    <filter name="group_date" string="Date" context="{'group_by': 'changed_at:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Price History Graph View (Optional - for analysis) -->
+    <record id="view_price_history_graph" model="ir.ui.view">
+        <field name="name">joiasmax.price.history.graph</field>
+        <field name="model">joiasmax.price.history</field>
+        <field name="arch" type="xml">
+            <graph string="Price History Analysis" type="line">
+                <field name="changed_at" interval="day"/>
+                <field name="new_price_brl" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Price History Pivot View (Optional - for analysis) -->
+    <record id="view_price_history_pivot" model="ir.ui.view">
+        <field name="name">joiasmax.price.history.pivot</field>
+        <field name="model">joiasmax.price.history</field>
+        <field name="arch" type="xml">
+            <pivot string="Price History Analysis">
+                <field name="product_id" type="row"/>
+                <field name="changed_at" interval="month" type="col"/>
+                <field name="price_difference_brl" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Price History Action -->
+    <record id="action_price_history" model="ir.actions.act_window">
+        <field name="name">Price History</field>
+        <field name="res_model">joiasmax.price.history</field>
+        <field name="view_mode">list,graph,pivot,form</field>
+        <field name="context">{'search_default_this_week': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">
+                No price changes recorded yet
+            </p>
+            <p>
+                Price history is automatically created when product prices change.
+                This audit trail cannot be modified or deleted for compliance purposes.
+            </p>
+        </field>
+    </record>
+
+</odoo>

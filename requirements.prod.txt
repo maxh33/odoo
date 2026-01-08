@@ -1,0 +1,28 @@
+# Odoo Multi-Tenant Platform - Production Python Requirements
+# Additional packages beyond base Odoo requirements
+
+# N8N Integration
+requests>=2.31.0
+python-jose[cryptography]>=3.3.0
+pydantic>=2.0.0
+
+# API Authentication
+PyJWT>=2.8.0
+passlib>=1.7.4
+
+# E-commerce Integration
+woocommerce>=3.0.0
+
+# Brazilian Localization
+python-decouple>=3.8
+pycpfcnpj>=1.7.0
+
+# Database Performance
+psycopg2-binary>=2.9.9
+
+# Monitoring and Logging
+prometheus-client>=0.19.0
+
+# Utilities
+python-dotenv>=1.0.0
+python-slugify>=8.0.1

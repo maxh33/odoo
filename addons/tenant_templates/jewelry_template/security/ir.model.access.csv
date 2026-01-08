@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_joiasmax_market_price_user,joiasmax.market.price.user,model_joiasmax_market_price,base.group_user,1,1,1,0
+access_joiasmax_market_price_manager,joiasmax.market.price.manager,model_joiasmax_market_price,base.group_system,1,1,1,1
+access_joiasmax_market_price_public,joiasmax.market.price.public,model_joiasmax_market_price,,1,0,0,0
+access_joiasmax_jewelry_pricing_user,joiasmax.jewelry.pricing.user,model_joiasmax_jewelry_pricing,base.group_user,1,1,1,1
+access_joiasmax_jewelry_pricing_manager,joiasmax.jewelry.pricing.manager,model_joiasmax_jewelry_pricing,base.group_system,1,1,1,1
+access_joiasmax_supplier_cost_user,joiasmax.supplier.cost.user,model_joiasmax_supplier_cost,base.group_user,1,1,1,1
+access_joiasmax_supplier_cost_manager,joiasmax.supplier.cost.manager,model_joiasmax_supplier_cost,base.group_system,1,1,1,1
+access_joiasmax_price_history_user,joiasmax.price.history.user,model_joiasmax_price_history,base.group_user,1,0,0,0
+access_joiasmax_price_history_manager,joiasmax.price.history.manager,model_joiasmax_price_history,base.group_system,1,1,1,0
+access_joiasmax_size_weight_adjustment_user,joiasmax.size.weight.adjustment.user,model_joiasmax_size_weight_adjustment,base.group_user,1,0,0,0
+access_joiasmax_size_weight_adjustment_manager,joiasmax.size.weight.adjustment.manager,model_joiasmax_size_weight_adjustment,base.group_system,1,1,1,1

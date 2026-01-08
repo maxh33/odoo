@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Market Price Form View -->
+    <record id="view_market_price_form" model="ir.ui.view">
+        <field name="name">joiasmax.market.price.form</field>
+        <field name="model">joiasmax.market.price</field>
+        <field name="arch" type="xml">
+            <form string="Market Price">
+                <header>
+                    <button name="action_activate"
+                            string="Activate"
+                            type="object"
+                            class="btn-primary"
+                            invisible="is_active"/>
+                    <button name="action_deactivate"
+                            string="Deactivate"
+                            type="object"
+                            class="btn-secondary"
+                            invisible="not is_active"/>
+                    <field name="is_active" widget="statusbar" statusbar_visible="active,inactive"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_fetch_current_price"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-refresh">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Fetch Price</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <label for="material_type" class="oe_edit_only"/>
+                        <h1>
+                            <field name="material_type" placeholder="Select Material..."/>
+                        </h1>
+                    </div>
+
+                    <group name="main_group">
+                        <group name="price_info" string="Price Information">
+                            <field name="price_per_gram_brl" widget="monetary"/>
+                        </group>
+
+                        <group name="source_info" string="Source Information">
+                            <field name="source_api"/>
+                            <field name="fetched_at" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page name="notes" string="Notes">
+                        </page>
+
+                        <page name="technical" string="Technical Info">
+                            <group>
+                                <field name="id" readonly="1"/>
+                                <field name="create_date" readonly="1"/>
+                                <field name="write_date" readonly="1"/>
+                                <field name="create_uid" readonly="1"/>
+                                <field name="write_uid" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Market Price List View -->
+    <record id="view_market_price_tree" model="ir.ui.view">
+        <field name="name">joiasmax.market.price.list</field>
+        <field name="model">joiasmax.market.price</field>
+        <field name="arch" type="xml">
+            <list string="Market Prices" decoration-success="is_active == True" decoration-muted="is_active == False">
+                <field name="material_type"/>
+                <field name="price_per_gram_brl" widget="monetary"/>
+                <field name="source_api" optional="show"/>
+                <field name="fetched_at"/>
+                <field name="is_active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Market Price Search View -->
+    <record id="view_market_price_search" model="ir.ui.view">
+        <field name="name">joiasmax.market.price.search</field>
+        <field name="model">joiasmax.market.price</field>
+        <field name="arch" type="xml">
+            <search string="Market Prices">
+                <field name="material_type"/>
+                <field name="source_api"/>
+
+                <filter name="active_prices" string="Active"
+                        domain="[('is_active', '=', True)]"/>
+                <filter name="inactive_prices" string="Inactive"
+                        domain="[('is_active', '=', False)]"/>
+
+                <separator/>
+                <filter name="gold_price" string="Gold"
+                        domain="[('material_type', '=', 'gold_24k')]"/>
+                <filter name="silver_price" string="Silver"
+                        domain="[('material_type', '=', 'silver_950')]"/>
+
+                <separator/>
+                <filter name="recent_fetch" string="Recently Fetched"
+                        domain="[('fetched_at', '&gt;=', (context_today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d'))]"/>
+
+                <group expand="0" string="Group By">
+                    <filter name="group_material_type" string="Material Type" context="{'group_by': 'material_type'}"/>
+                    <filter name="group_source_api" string="Source API" context="{'group_by': 'source_api'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Market Price Kanban View (Optional - for dashboard) -->
+    <record id="view_market_price_kanban" model="ir.ui.view">
+        <field name="name">joiasmax.market.price.kanban</field>
+        <field name="model">joiasmax.market.price</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile">
+                <field name="material_type"/>
+                <field name="price_per_gram_brl"/>
+                <field name="fetched_at"/>
+                <field name="is_active"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <div class="o_kanban_record_top">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <field name="material_type"/>
+                                    </strong>
+                                </div>
+                                <span class="badge badge-pill" t-if="record.is_active.raw_value" style="background-color: #28a745;">Active</span>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <field name="price_per_gram_brl"/> R$/g
+                            </div>
+                            <div class="o_kanban_record_bottom">
+                                <div class="oe_kanban_bottom_left">
+                                    <span>Updated: <field name="fetched_at" widget="date"/></span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Market Price Action -->
+    <record id="action_market_price" model="ir.actions.act_window">
+        <field name="name">Market Prices</field>
+        <field name="res_model">joiasmax.market.price</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="context">{'search_default_active_prices': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No market prices found
+            </p>
+            <p>
+                Market prices are automatically fetched from external APIs (Coinbase, exchange rates).
+                Gold and silver prices are updated daily via N8N automation.
+            </p>
+        </field>
+    </record>
+
+</odoo>

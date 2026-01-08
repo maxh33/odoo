@@ -1,0 +1,29 @@
+name: "Claude Code Review"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Using OAuth token from Claude Pro account
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Direct prompt for automated review (no @claude mention needed)
+          direct_prompt: |
+            Please review this pull request and look for bugs and security issues.
+            Only report on bugs and potential vulnerabilities you find. Be concise.
