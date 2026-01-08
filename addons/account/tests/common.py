@@ -13,10 +13,13 @@ import base64
 import logging
 import re
 
+import difflib
+import pprint
+import requests
 from contextlib import contextmanager
 from functools import wraps
 from lxml import etree
-from unittest import SkipTest
+from unittest import SkipTest, TestCase
 from unittest.mock import patch
 
 _logger = logging.getLogger(__name__)
@@ -285,11 +288,13 @@ class AccountTestInvoicingCommon(ProductCommon):
             'default_account_revenue': AccountAccount.search([
                     *account_company_domain,
                     ('account_type', '=', 'income'),
+                    ('deprecated', '=', False),
                     ('id', '!=', company.account_journal_early_pay_discount_gain_account_id.id)
                 ], limit=1),
             'default_account_expense': AccountAccount.search([
                     *account_company_domain,
                     ('account_type', '=', 'expense'),
+                    ('deprecated', '=', False),
                     ('id', '!=', company.account_journal_early_pay_discount_loss_account_id.id)
                 ], limit=1),
             'default_account_receivable': cls.env['res.partner']._fields['property_account_receivable_id'].get_company_dependent_fallback(
@@ -297,21 +302,25 @@ class AccountTestInvoicingCommon(ProductCommon):
             ),
             'default_account_payable': AccountAccount.search([
                     *account_company_domain,
-                    ('account_type', '=', 'liability_payable')
+                    ('account_type', '=', 'liability_payable'),
+                    ('deprecated', '=', False),
                 ], limit=1),
             'default_tax_account_receivable': company.account_purchase_tax_id.tax_group_id.tax_receivable_account_id,
             'default_tax_account_payable': company.account_sale_tax_id.tax_group_id.tax_payable_account_id,
             'default_account_assets': AccountAccount.search([
                     *account_company_domain,
-                    ('account_type', '=', 'asset_fixed')
+                    ('account_type', '=', 'asset_fixed'),
+                    ('deprecated', '=', False),
                 ], limit=1),
             'default_account_deferred_expense': AccountAccount.search([
                     *account_company_domain,
-                    ('account_type', '=', 'asset_current')
+                    ('account_type', '=', 'asset_current'),
+                    ('deprecated', '=', False),
                 ], limit=1),
             'default_account_deferred_revenue': AccountAccount.search([
                     *account_company_domain,
-                    ('account_type', '=', 'liability_current')
+                    ('account_type', '=', 'liability_current'),
+                    ('deprecated', '=', False),
                 ], limit=1),
             'default_account_tax_sale': company.account_sale_tax_id.mapped('invoice_repartition_line_ids.account_id'),
             'default_account_tax_purchase': company.account_purchase_tax_id.mapped('invoice_repartition_line_ids.account_id'),
@@ -738,9 +747,41 @@ class AccountTestInvoicingCommon(ProductCommon):
             ._create_payments()
         )
 
+    @contextmanager
+    def mocked_get_payment_method_information(self, code='none'):
+        self.ensure_installed('account_payment')
+
+        Method_get_payment_method_information = self.env['account.payment.method']._get_payment_method_information
+
+        def _get_payment_method_information(*args, **kwargs):
+            res = Method_get_payment_method_information()
+            res[code] = {'mode': 'electronic', 'type': ('bank',)}
+            return res
+
+        with patch.object(self.env.registry['account.payment.method'], '_get_payment_method_information', _get_payment_method_information):
+            yield
+
+    @classmethod
+    def _create_dummy_payment_method_for_provider(cls, provider, journal, **kwargs):
+        cls.ensure_installed('account_payment')
+
+        code = kwargs.get('code', 'none')
+
+        with cls.mocked_get_payment_method_information(cls, code):
+            payment_method = cls.env['account.payment.method'].sudo().create({
+                'name': 'Dummy method',
+                'code': code,
+                'payment_type': 'inbound',
+                **kwargs,
+            })
+            provider.journal_id = journal
+            return payment_method
+
     @classmethod
     def _create_sale_order(cls, confirm=True, **values):
         cls.ensure_installed('sale')
+
+        cls._prepare_record_kwargs('sale.order', values)
 
         sale_order = cls.env['sale.order'].create([{
             'partner_id': cls.partner_a.id,
@@ -1973,3 +2014,158 @@ class TestAccountMergeCommon(AccountTestInvoicingCommon):
             partner: 'property_account_receivable_id',
             attachment: 'res_id',
         }
+
+
+class PatchRequestsMixin(TestCase):
+    """ Mock external HTTP requests made through the `requests` library.
+    Assert expected requests and provide mocked responses in a record/replay fashion.
+    """
+
+    external_mode = False
+
+    @contextmanager
+    def assertRequests(self, expected_requests_and_responses: list[tuple[dict, requests.Response]]):
+        """ Assert expected requests and provide mocked responses in a record/replay fashion.
+
+        Patches `requests.Session.request`, which is the main method internally used by the
+        `requests` library to perform HTTP requests, asserts the request contents and serves
+        the provided mocked responses.
+
+        To transform the mocked test into a live test, set the `external_mode` attribute to:
+        - True to let the requests through;
+        - 'warn' to let the requests through but issue a warning if the requests / responses
+          differ from the expected requests / mocked responses.
+
+        :param expected_requests_and_responses: A list of tuples, each containing
+                                                an expected request and a mocked response.
+                                                The expected request is a dictionary of arguments
+                                                passed to `requests.Session.request`,
+                                                and the mocked response is an object that supports
+                                                the `requests.Response` interface.
+
+        Example usage:
+        ```
+        mocked_response = requests.Response()
+        mocked_response.status_code = 200
+        mocked_response._content = json.dumps({'message': 'Success'})
+
+        with self.assertRequestsMade([
+            (
+                {'method': 'POST', 'url': 'https://example.com/send', 'json': {'message': 'Hello World!'}},
+                mocked_response,
+            ),
+        ]):
+            response = requests.post('https://example.com/send', json={'message': 'Hello World!'})
+        ```
+        """
+        if self.external_mode is True:
+            yield  # Full external mode: don't patch `requests.Session.request` at all
+        elif self.external_mode == 'warn':
+            # External mode with warnings
+            yield from self.patch_requests_warn(expected_requests_and_responses)
+        else:
+            # Mocked mode
+            yield from self.assertMockRequests(expected_requests_and_responses)
+
+    def assertMockRequests(self, expected_requests_and_responses):
+        """ Mock requests, assert that the requests are as expected and serve a mocked response. """
+        expected_requests_and_responses_iter = iter(expected_requests_and_responses)
+
+        def mock_request(session, method, url, **kwargs):
+            actual_request = {
+                'method': method,
+                'url': url,
+                **kwargs,
+            }
+
+            try:
+                expected_request, mocked_response = next(expected_requests_and_responses_iter)
+            except StopIteration:
+                self.fail("Unexpected request: %s" % actual_request)
+
+            self.assertRequestsEqual(actual_request, expected_request)
+            return mocked_response
+
+        with patch.object(requests.Session, 'request', new=mock_request):
+            yield
+
+        next_expected_request, _ = next(expected_requests_and_responses_iter, (None, None))
+        if next_expected_request is not None:
+            self.fail("Expected request not made: %s" % next_expected_request)
+
+    def patch_requests_warn(self, expected_requests_and_responses):
+        """ Let requests pass through but warn if the request or the response differ from
+        what is expected.
+        """
+        expected_requests_and_responses_iter = iter(expected_requests_and_responses)
+        original_request_method = requests.Session.request
+
+        def request_and_warn(session, method, url, **kwargs):
+            actual_request = {
+                'method': method,
+                'url': url,
+                **kwargs,
+            }
+
+            try:
+                expected_request, expected_response = next(expected_requests_and_responses_iter)
+            except StopIteration:
+                _logger.warning("Unexpected request: %s", actual_request)
+                return original_request_method(session, method, url, **kwargs)
+
+            try:
+                self.assertRequestsEqual(actual_request, expected_request)
+            except AssertionError as e:
+                _logger.warning("Request differs from expected request: \n%s", e.args[0])
+
+            actual_response = original_request_method(session, method, url, **kwargs)
+
+            if diff_msg := self.difference_between_responses(actual_response, expected_response):
+                _logger.warning('Response differs from expected response:\n%s', diff_msg)
+
+            return actual_response
+
+        with patch.object(requests.Session, 'request', request_and_warn):
+            yield
+
+        for expected_request, _ in expected_requests_and_responses_iter:
+            _logger.warning("Expected request not made: %s", expected_request)
+
+    def assertRequestsEqual(self, actual_request, expected_request):
+        """ Method used to validate that the actual request is identical to the expected one.
+            Can be overridden to customize the validation. """
+        return self.assertEqual(actual_request, expected_request)
+
+    def difference_between_responses(self, actual_response, expected_response):
+        """ Method used by the `patch_requests_warn` method to know whether
+            the actual response is identical to the mocked response when live-testing.
+            Can be overridden to customize this behaviour. """
+
+        def generate_diff(d1, d2):
+            return '\n'.join(difflib.ndiff(
+                pprint.pformat(d1).splitlines(),
+                pprint.pformat(d2).splitlines())
+            )
+
+        if (
+            actual_response.status_code == expected_response.status_code
+            and actual_response.content == expected_response.content
+        ):
+            return None
+
+        diff_msg = ""
+        if actual_response.status_code != expected_response.status_code:
+            diff_msg += 'Status code: %s != %s\n' % (actual_response.status_code, expected_response.status_code)
+
+        if actual_response.content != expected_response.content:
+            try:
+                diff = generate_diff(actual_response.json(), expected_response.json())
+                diff_msg += 'Content: \n%s' % diff
+            except (TypeError, requests.exceptions.InvalidJSONError):
+                try:
+                    diff = generate_diff(actual_response.text, expected_response.text)
+                    diff_msg += 'Content: \n%s' % diff
+                except (TypeError, requests.exceptions.InvalidJSONError):
+                    diff_msg += 'Content: \n%s\n != \n%s' % (actual_response.content, expected_response.content)
+
+        return diff_msg

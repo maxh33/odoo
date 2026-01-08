@@ -17,23 +17,16 @@ registry.category("web_tour.tours").add("ProductComboPriceTaxIncludedTour", {
             Chrome.startPoS(),
             Dialog.confirm("Open Register"),
             scan_barcode("SuperCombo"),
+            combo.isNotPresent("Combo Product 1 (archived)"),
             combo.select("Combo Product 3"),
             combo.isConfirmationButtonDisabled(),
             combo.select("Combo Product 9"),
             // Check Product Configurator is open
             Dialog.is("Attribute selection"),
             Dialog.discard(),
-            {
-                content: "Check that Combo Product 10 (White) archived variant is disabled",
-                trigger: `.ptav-not-available article.product .product-content .product-name:contains("Combo Product 10 (White)")`,
-            },
-            combo.isConfirmationButtonDisabled(),
             combo.select("Combo Product 5"),
             combo.select("Combo Product 7"),
             combo.isSelected("Combo Product 7"),
-            // Check archived variant Selection
-            combo.select("Combo Product 10 (White)"),
-            combo.isConfirmationButtonDisabled(),
             combo.select("Combo Product 8"),
             combo.isSelected("Combo Product 8"),
             combo.isNotSelected("Combo Product 7"),
@@ -252,5 +245,30 @@ registry.category("web_tour.tours").add("test_combo_disallowLineQuantityChange_2
                 ].flat()
             ),
             Order.hasTotal("47.33"),
+        ].flat(),
+});
+
+registry.category("web_tour.tours").add("test_combo_item_image_display", {
+    steps: () =>
+        [
+            Chrome.startPoS(),
+            Dialog.confirm("Open Register"),
+            ProductScreen.clickDisplayedProduct("Office Combo"),
+            combo.checkImgAndSelect("Combo Product 2", true),
+            combo.checkImgAndSelect("Combo Product 4", true),
+            combo.checkImgAndSelect("Combo Product 6", true),
+            Dialog.confirm(),
+        ].flat(),
+});
+
+registry.category("web_tour.tours").add("test_combo_item_image_not_display", {
+    steps: () =>
+        [
+            Chrome.startPoS(),
+            ProductScreen.clickDisplayedProduct("Office Combo"),
+            combo.checkImgAndSelect("Combo Product 2", false),
+            combo.checkImgAndSelect("Combo Product 4", false),
+            combo.checkImgAndSelect("Combo Product 6", false),
+            Dialog.confirm(),
         ].flat(),
 });

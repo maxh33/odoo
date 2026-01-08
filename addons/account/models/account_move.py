@@ -5115,6 +5115,15 @@ class AccountMove(models.Model):
             if move.line_ids.account_id.filtered(lambda account: account.deprecated) and not self._context.get('skip_account_deprecation_check'):
                 validation_msgs.add(_("A line of this move is using a deprecated account, you cannot post it."))
 
+            account_companies = move.line_ids.account_id.company_ids
+            move_journal_company = move.journal_id.company_id.sudo()
+
+            if not ((move_journal_company.child_ids | move_journal_company.parent_ids) & account_companies == account_companies):
+                raise UserError(self.env._(
+                    "The entry '%(move_name)s (id %(move_id)s) is using accounts from a different company.",
+                    move_name=move.name, move_id=move.id
+                ))
+
             # If the field autocheck_on_post is set, we want the checked field on the move to be checked
             if move.journal_id.autocheck_on_post:
                 move.checked = move.journal_id.autocheck_on_post
@@ -5317,7 +5326,22 @@ class AccountMove(models.Model):
         }
 
     def action_update_fpos_values(self):
-        self.invoice_line_ids._compute_price_unit()
+        lines_to_recompute = self.env['account.move.line']
+        for line in self.invoice_line_ids:
+            if line.display_type in ('line_section', 'line_note'):
+                continue
+            if not line.price_unit:
+                lines_to_recompute |= line
+                continue
+            new_taxes = line._get_computed_taxes()
+            if line.tax_ids.filtered('price_include') != new_taxes.filtered('price_include'):
+                line.price_unit = line.product_id._get_tax_included_unit_price_from_price(
+                    line.price_unit,
+                    line.tax_ids,
+                    fiscal_position=line.move_id.fiscal_position_id,
+                    product_taxes_after_fp=new_taxes,
+                )
+        lines_to_recompute._compute_price_unit()
         self.invoice_line_ids._compute_tax_ids()
         self.line_ids._compute_account_id()
 
@@ -6534,9 +6558,6 @@ class AccountMove(models.Model):
         This is necessary to avoid the re-generation of the PDF through the action_report.
         Indeed, once a legal PDF is generated, it should be used and not re-generated.
         """
-        report = self.env['ir.actions.report'].search([('report_name', '=', 'account.report_invoice_with_payments'), ('binding_model_id', '!=', False)], limit=1)
-        if report:
-            return []
         return [{
             'key': 'download_pdf',
             'description': _('PDF'),

@@ -1,7 +1,7 @@
 from base64 import b64encode
 from datetime import timedelta
 
-from odoo import _, fields, models
+from odoo import _, api, fields, models
 
 from odoo.addons.account.models.company import PEPPOL_LIST
 from odoo.addons.account_edi_proxy_client.models.account_edi_proxy_user import AccountEdiProxyError
@@ -9,6 +9,14 @@ from odoo.addons.account_edi_proxy_client.models.account_edi_proxy_user import A
 
 class AccountMoveSend(models.AbstractModel):
     _inherit = 'account.move.send'
+
+    @api.model
+    def _get_default_sending_method(self, move) -> str:
+        # EXTENDS 'account'
+        preferred_method = move.commercial_partner_id.with_company(move.company_id).invoice_sending_method
+        if not preferred_method and self._is_applicable_to_move('peppol', move):
+            return 'peppol'
+        return super()._get_default_sending_method(move)
 
     # -------------------------------------------------------------------------
     # ALERTS
@@ -220,7 +228,7 @@ class AccountMoveSend(models.AbstractModel):
                     invoice.peppol_message_uuid = message['message_uuid']
                     invoice.peppol_move_state = 'processing'
                     attachments_linked, attachments_not_linked = self._get_ubl_available_attachments(
-                        invoice_data['mail_attachments_widget'],
+                        invoice_data.get('mail_attachments_widget', []),
                         invoice_data['invoice_edi_format']
                     )
                     if attachments_not_linked:
