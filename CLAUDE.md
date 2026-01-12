@@ -40,6 +40,15 @@ odoo-multitenant-platform/
 │   ├── tenant_templates/               # Industry-specific tenant templates
 │   │   ├── base_template/              # Base tenant configuration
 │   │   ├── jewelry_template/           # Jewelry store template
+│   │   │   ├── models/                 # Odoo models (product, pricing, etc.)
+│   │   │   ├── data/                   # Data files (size_weight_adjustments.xml)
+│   │   │   ├── import/                 # Import scripts (CPL supplier, Bling ERP)
+│   │   │   │   ├── CPL_WORKFLOW_SUMMARY.md        # CPL quick start guide
+│   │   │   │   ├── CPL_SUPPLIER_ONBOARDING.md     # CPL technical guide
+│   │   │   │   ├── CPL_VALIDATION_STATUS.md       # CPL import tracking
+│   │   │   │   ├── cpl_products_template.csv      # CPL CSV template
+│   │   │   │   └── bulk_import_cpl_products.py    # CPL bulk import script
+│   │   │   └── supplier/               # Supplier specifications (cpl_size_indice.md)
 │   │   ├── retail_template/            # General retail template
 │   │   ├── manufacturing_template/     # Manufacturing template
 │   │   └── services_template/          # Service business template
@@ -449,7 +458,10 @@ curl https://n8n.maxhaider.dev/webhook/health
 - **Real-time Updates**: Webhook-based instant synchronization
 
 ### Example Workflows by Template:
-- **Jewelry Template**: Gold price automation, gemstone inventory tracking
+- **Jewelry Template**:
+  - Gold price automation (CPL supplier size-based pricing - Production Ready ✅)
+  - Gemstone inventory tracking
+  - Automatic cost recalculation when gold market price updates
 - **Retail Template**: Multi-channel inventory sync, promotional price updates
 - **Manufacturing Template**: Raw material cost tracking, production scheduling
 - **Services Template**: Project milestone notifications, time tracking integration
@@ -459,6 +471,12 @@ curl https://n8n.maxhaider.dev/webhook/health
 ### Jewelry Template Features
 - **Product Attributes**: Metal type/karat, weight, gemstone tracking, craftsmanship levels
 - **Pricing Logic**: Automated precious metal price updates, material cost calculations
+- **CPL Supplier Integration**: Size-based pricing for wedding rings (41 variants per product, sizes 6-46)
+  - Automatic weight calculation: `base_weight × COEF × size_adjustment_factor`
+  - Automatic cost calculation: `weight × gold_price × purity × provider_index`
+  - Automatic price calculation: `cost × (1 + markup%)`
+  - Real-time updates when gold market price changes
+  - Bulk import capability for entire supplier catalogs
 - **Inventory Management**: Certificate tracking, quality metrics, custom piece workflows
 
 ### Retail Template Features
@@ -506,10 +524,64 @@ curl https://n8n.maxhaider.dev/webhook/health
 - Design for template reusability across different business types
 - Integrate with N8N webhook framework for automation
 
+### CPL Supplier Size-Based Pricing (Jewelry Template)
+
+**Status**: ✅ Production Ready (Validated: 2026-01-12)
+
+The jewelry template includes complete CPL supplier integration for size-based wedding ring pricing:
+
+**Features**:
+- 41 ring size variants per product (sizes 6-46)
+- Automatic weight/cost/price calculation based on gold market price
+- Real-time recalculation when gold price changes (N8N webhook)
+- Bulk import capability via CSV
+- Complete validation suite
+
+**Documentation**:
+- Quick Start: `addons/tenant_templates/jewelry_template/import/CPL_WORKFLOW_SUMMARY.md`
+- Technical Guide: `addons/tenant_templates/jewelry_template/import/CPL_SUPPLIER_ONBOARDING.md`
+- Status Tracking: `addons/tenant_templates/jewelry_template/import/CPL_VALIDATION_STATUS.md`
+- CSV Template: `addons/tenant_templates/jewelry_template/import/cpl_products_template.csv`
+
+**Scripts**:
+- `configure_cpl_product.py` - Configure product with base weight and COEF
+- `create_cpl_variants_with_attributes.py` - Create 41 size variants
+- `validate_cpl_pricing.py` - Comprehensive validation of calculations
+- `bulk_import_cpl_products.py` - Bulk import from CSV file
+- Diagnostic scripts: `check_product_config.py`, `check_size_table.py`, `check_market_price.py`
+
+**Validated Products** (Examples):
+- C725R: Base weight 7.0g, COEF 1.15 - 41 variants ✅
+- C790RZ: Base weight 7.0g, COEF 1.10 - 41 variants ✅
+
+**Business Formulas**:
+```
+Weight = Base Weight × COEF × Size Adjustment Factor
+Cost = Weight × Gold Price/gram × Purity Factor × Provider Index
+Price = Cost × (1 + Markup%)
+```
+
+**Database Tables**:
+- `joiasmax.size.weight.adjustment` - CPL size adjustment factors (45 entries, sizes 6-50)
+- `joiasmax.market.price` - Gold market prices (updated via N8N webhook)
+- `joiasmax.jewelry.pricing` - Jewelry pricing configuration per product
+
+**Usage**:
+```bash
+# Single product workflow
+python3 configure_cpl_product.py --sku C725R --base-weight 7.0 --coef 1.15 --db tenant_joiasmax --password admin
+python3 create_cpl_variants_with_attributes.py --sku C725R --db tenant_joiasmax --password admin
+python3 validate_cpl_pricing.py --sku C725R --db tenant_joiasmax --password admin
+
+# Bulk import
+python3 bulk_import_cpl_products.py --csv cpl_products.csv --db tenant_joiasmax --password admin --dry-run
+python3 bulk_import_cpl_products.py --csv cpl_products.csv --db tenant_joiasmax --password admin
+```
+
 ### Testing
 - Test multi-tenant isolation thoroughly
 - Verify N8N workflow integrations
-- Validate gold price calculation accuracy
+- Validate gold price calculation accuracy (CPL size-based pricing validated ✅)
 - Test WooCommerce bidirectional sync
 
 ## Integration Endpoints
