@@ -2,7 +2,27 @@
 
 Complete guide for importing product catalogs into the Jewelry Template for Odoo 18.
 
-## 📋 Table of Contents
+## 🎯 Which Guide Do I Need?
+
+### 📦 For Bling ERP Product Imports
+**You're importing general products from Bling ERP with standard data (name, barcode, weight, categories)**
+
+→ **Continue reading this guide below**
+
+### 💍 For CPL Supplier Products (Size-Based Wedding Rings)
+**You're importing CPL supplier wedding rings with size-based pricing (41 variants per product, automatic cost calculation based on gold price)**
+
+→ **[Read the CPL Supplier Onboarding Guide](CPL_WORKFLOW_SUMMARY.md)** ⭐
+
+**CPL Documentation:**
+- **[CPL_WORKFLOW_SUMMARY.md](CPL_WORKFLOW_SUMMARY.md)** - Quick start and workflow
+- **[CPL_SUPPLIER_ONBOARDING.md](CPL_SUPPLIER_ONBOARDING.md)** - Comprehensive guide
+- **[CPL_VALIDATION_STATUS.md](CPL_VALIDATION_STATUS.md)** - Import tracking
+- **[cpl_products_template.csv](cpl_products_template.csv)** - CSV template for bulk import
+
+---
+
+## 📋 Table of Contents (Bling Import Guide)
 
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
