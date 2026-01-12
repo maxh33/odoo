@@ -74,23 +74,52 @@ class CPLProductConfigurator:
         """
         Find product template by SKU
 
+        For products with variants, Odoo clears the template's default_code,
+        so we search for a variant with matching SKU pattern instead.
+
         Args:
             sku: Product SKU (default_code)
 
         Returns:
             Product ID or None
         """
+        # First try: search template directly (for products without variants)
         product_ids = self.execute(
             'product.template', 'search',
             [[('default_code', '=', sku)]],
             {'limit': 1}
         )
 
-        if not product_ids:
-            logger.error(f"Product with SKU '{sku}' not found!")
+        if product_ids:
+            logger.info(f"Found product template directly (ID: {product_ids[0]})")
+            return product_ids[0]
+
+        # Second try: search variants with SKU pattern (for products with variants)
+        logger.info(f"Template not found by SKU '{sku}', searching variants...")
+        variant_ids = self.execute(
+            'product.product', 'search',
+            [[('default_code', '=like', f'{sku}_%')]],
+            {'limit': 1}
+        )
+
+        if not variant_ids:
+            logger.error(f"Product with SKU '{sku}' not found (tried template and variant pattern)!")
             return None
 
-        return product_ids[0]
+        # Get the product template from the variant
+        variants = self.execute(
+            'product.product', 'read',
+            [variant_ids],
+            {'fields': ['product_tmpl_id', 'default_code']}
+        )
+
+        if not variants:
+            return None
+
+        template_id = variants[0]['product_tmpl_id'][0]
+        logger.info(f"Found via variant '{variants[0]['default_code']}' (Template ID: {template_id})")
+
+        return template_id
 
     def configure_product(self, sku, base_weight, coef, material='gold',
                          purity='24k', provider_indice=1.0, markup=200.0):

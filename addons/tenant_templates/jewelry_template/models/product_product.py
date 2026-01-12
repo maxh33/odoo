@@ -21,6 +21,13 @@ class ProductProduct(models.Model):
         help='Auto-calculated: base_weight × COEF × size_adjustment_factor'
     )
 
+    standard_price = fields.Float(
+        compute='_compute_variant_cost',
+        store=True,
+        readonly=False,
+        help='Cost price auto-calculated from weight × market price × purity × provider index'
+    )
+
     @api.depends(
         'product_tmpl_id.metal_weight_grams',
         'product_tmpl_id.size_pricing_coef',

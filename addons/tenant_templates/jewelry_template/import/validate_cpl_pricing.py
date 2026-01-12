@@ -40,8 +40,8 @@ class CPLPricingValidator:
     """Validate CPL size-based pricing calculations"""
 
     # Expected number of variants
-    EXPECTED_VARIANTS = 45
-    SIZE_RANGE = range(6, 51)
+    EXPECTED_VARIANTS = 41  # Sizes 6-46 (practical business range)
+    SIZE_RANGE = range(6, 47)
 
     # Test cases from cpl_size_indice.md
     TEST_CASES = {
@@ -60,10 +60,10 @@ class CPLPricingValidator:
             'adjustment_factor': 0.7666,
             'description': 'Minimum size'
         },
-        50: {
-            'size_number': 50,
-            'adjustment_factor': 1.5000,
-            'description': 'Maximum size'
+        46: {
+            'size_number': 46,
+            'adjustment_factor': 1.4333,
+            'description': 'Maximum size (practical range)'
         },
     }
 
@@ -106,19 +106,57 @@ class CPLPricingValidator:
         )
 
     def find_product(self, sku):
-        """Find product template by SKU"""
+        """Find product template by SKU
+
+        For products with variants, Odoo clears the template's default_code,
+        so we search for a variant with matching SKU pattern instead.
+        """
+        # First try: search template directly (for products without variants)
         product_ids = self.execute(
             'product.template', 'search',
             [[('default_code', '=', sku)]],
             {'limit': 1}
         )
 
-        if not product_ids:
+        if product_ids:
+            products = self.execute(
+                'product.template', 'read',
+                product_ids,
+                {'fields': [
+                    'id', 'name', 'default_code',
+                    'has_size_based_pricing', 'size_pricing_coef',
+                    'metal_weight_grams', 'material_type', 'metal_purity',
+                    'jewelry_pricing_id'
+                ]}
+            )
+            return products[0] if products else None
+
+        # Second try: search variants with SKU pattern (for products with variants)
+        # Look for variants like C725R_6, C725R_7, etc.
+        variant_ids = self.execute(
+            'product.product', 'search',
+            [[('default_code', '=like', f'{sku}_%')]],
+            {'limit': 1}
+        )
+
+        if not variant_ids:
             return None
+
+        # Get the product template from the variant
+        variants = self.execute(
+            'product.product', 'read',
+            [variant_ids],
+            {'fields': ['product_tmpl_id']}
+        )
+
+        if not variants:
+            return None
+
+        template_id = variants[0]['product_tmpl_id'][0]
 
         products = self.execute(
             'product.template', 'read',
-            product_ids,
+            [[template_id]],
             {'fields': [
                 'id', 'name', 'default_code',
                 'has_size_based_pricing', 'size_pricing_coef',
@@ -160,7 +198,7 @@ class CPLPricingValidator:
 
         variants = self.execute(
             'product.product', 'read',
-            variant_ids,
+            [variant_ids],
             {'fields': [
                 'id', 'default_code', 'ring_size',
                 'calculated_metal_weight', 'standard_price', 'list_price'
@@ -382,11 +420,11 @@ class CPLPricingValidator:
             logger.warning(f"⚠️  Missing sizes: {sorted(missing_sizes)}")
             results['warnings'] += 1
         else:
-            logger.info("✓ All 45 sizes present (6-50)")
+            logger.info("✓ All 41 sizes present (6-46)")
             results['passed'] += 1
 
         # Check for invalid sizes
-        invalid_sizes = [s for s in variants_by_size.keys() if s < 6 or s > 50]
+        invalid_sizes = [s for s in variants_by_size.keys() if s < 6 or s > 46]
         if invalid_sizes:
             logger.error(f"❌ Invalid ring sizes found: {invalid_sizes}")
             results['failed'] += 1

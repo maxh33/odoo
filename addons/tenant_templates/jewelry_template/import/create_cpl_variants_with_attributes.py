@@ -6,6 +6,8 @@ Create CPL Size Variants Using Odoo Product Attributes
 This script uses Odoo's built-in product attribute system to create variants.
 This properly handles the combination_indices constraint.
 
+Creates 41 ring size variants (sizes 6-46) - practical business range.
+
 Usage:
     python3 create_cpl_variants_with_attributes.py --sku C725R --db tenant_joiasmax --password admin
 """
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 class CPLVariantCreatorWithAttributes:
     """Create size variants using Odoo's product attribute system"""
 
-    SIZE_RANGE = range(6, 51)
+    SIZE_RANGE = range(6, 47)  # Sizes 6-46 (41 variants) - practical business range
 
     def __init__(self, url, db, username, password):
         self.url = url
@@ -135,7 +137,7 @@ class CPLVariantCreatorWithAttributes:
             created += 1
 
         logger.info(f"✓ Created {created} new attribute values")
-        logger.info(f"✓ Total: {len(value_ids)} size values (6-50)")
+        logger.info(f"✓ Total: {len(value_ids)} size values (6-46)")
 
         return value_ids
 
@@ -308,7 +310,7 @@ class CPLVariantCreatorWithAttributes:
                 logger.info("\nNext steps:")
                 logger.info("1. Run validate_cpl_pricing.py to verify calculations")
                 logger.info("2. Check Odoo UI: Sales > Products > Search for SKU")
-                logger.info("3. Verify all 45 variants show correctly")
+                logger.info("3. Verify all 41 variants show correctly (sizes 6-46)")
 
             return success
 
