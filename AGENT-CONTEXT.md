@@ -24,6 +24,8 @@ Multi-tenant Odoo 18.0 Community Edition platform with industry-specific templat
 | Documentation hub | `TABLE-OF-CONTENTS.md` (master index) |
 | Deployment | `docker-compose.yml` (local), VPS integration docs |
 | N8N integration | `addons/n8n_connector/` |
+| **E-commerce repo** | `D:\Programacao\Repositorios\odoo-ecommerce` |
+| E-commerce planning | `addons/tenant_templates/supplier/log.md` |
 
 ---
 
@@ -47,6 +49,19 @@ Multi-tenant Odoo 18.0 Community Edition platform with industry-specific templat
 - **Maintenance** (4): recalculate_prices, force_recompute, etc. ✅
 - **Bling ERP** (5): import_products + 4 helpers ✅
 - **Testing** (4): test_single_product, test_variant_creation, etc. ✅
+
+### E-commerce Integration (WooCommerce)
+
+| Phase | Status | Components |
+|-------|--------|------------|
+| Phase 1 | ✅ Complete | WordPress 6.9, WooCommerce 10.4.3, MinIO S3, PostgreSQL 16 |
+| Phase 2 | ⏳ Next | Integration layer (Python): Odoo XML-RPC ↔ WooCommerce REST |
+| Phase 3 | ⏳ Planned | VPS deployment with Traefik, SSL, multi-tenant routing |
+
+**Local Access**:
+- WordPress: `http://localhost:8080`
+- MinIO Console: `http://localhost:9001`
+- PostgreSQL: `localhost:5433`
 
 ### Database Tables (joiasmax module)
 
@@ -169,10 +184,22 @@ SELECT * FROM joiasmax_market_price WHERE is_active = TRUE;
 - Price recalculation: `POST /api/v1/jewelry/recalculate_prices`
 - Health check: `GET /api/v1/jewelry/recalculate_prices/health`
 
-### WooCommerce (Partial)
+### WooCommerce (Phase 2)
 
-- Price sync via `joiasmax.price.history.synced_to_woocommerce` flag
-- N8N polls price_history for changes to sync
+**Product Sync Flow** (Odoo → WooCommerce):
+1. Fetch from Odoo XML-RPC (`product.template`, `jewelry_pricing`)
+2. Upload images to MinIO S3 (`odoo-products-tenant1` bucket)
+3. Map to WooCommerce format + sync via REST API
+
+**Field Mapping**:
+```
+product_template.name → product.name
+product_template.default_code → product.sku
+jewelry_pricing.final_price_brl → product.regular_price
+product_variant.ring_size → product.attributes[size]
+```
+
+**Status**: Phase 1 complete, Phase 2 integration in progress
 
 ---
 
@@ -227,6 +254,6 @@ SELECT * FROM joiasmax_market_price WHERE is_active = TRUE;
 
 ---
 
-**Last Updated**: 2026-01-12
-**Agent Version**: 1.0
+**Last Updated**: 2026-01-15
+**Agent Version**: 1.1
 **Project**: Odoo Multi-Tenant Platform
