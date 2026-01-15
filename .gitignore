@@ -91,3 +91,5 @@ addons/tenant_templates/jewelry_template/import/*.csv
 
 # Supplier pricing indices (sensitive data)
 addons/tenant_templates/supplier/
+# Claude temp files
+tmpclaude-*-cwd
