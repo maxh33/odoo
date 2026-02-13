@@ -21,6 +21,7 @@ Requirements:
 """
 
 import argparse
+import os
 import logging
 import sys
 import time
@@ -319,10 +320,12 @@ def main():
                        help='Database name')
     parser.add_argument('--user', default='admin',
                        help='Odoo username')
-    parser.add_argument('--password', required=True,
-                       help='Odoo password')
+    parser.add_argument('--password', default=os.environ.get('ODOO_PASSWORD'),
+                       help='Odoo password (or set ODOO_PASSWORD env var)')
 
     args = parser.parse_args()
+    if not args.password:
+        parser.error("--password is required (or set ODOO_PASSWORD environment variable)")
 
     try:
         # Initialize creator

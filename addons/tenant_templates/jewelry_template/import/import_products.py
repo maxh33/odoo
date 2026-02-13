@@ -5,6 +5,7 @@ Main script for importing products from Bling CSV export to Odoo
 """
 
 import argparse
+import os
 import csv
 import logging
 import sys
@@ -1274,7 +1275,8 @@ def main():
     parser.add_argument('--url', default='http://localhost:8069', help='Odoo server URL')
     parser.add_argument('--database', default='tenant_joiasmax', help='Odoo database name')
     parser.add_argument('--username', default='admin', help='Odoo username')
-    parser.add_argument('--password', default='admin', help='Odoo password')
+    parser.add_argument('--password', default=os.environ.get('ODOO_PASSWORD', 'admin'),
+                       help='Odoo password (or set ODOO_PASSWORD env var)')
     parser.add_argument('--output-dir', default='reports', help='Output directory for reports')
     parser.add_argument('--skip-updates', action='store_true',
                        help='Skip updating existing products (only create new ones) - useful for debugging')

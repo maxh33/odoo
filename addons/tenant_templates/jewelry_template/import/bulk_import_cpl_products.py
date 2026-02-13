@@ -19,6 +19,7 @@ Usage:
 """
 
 import argparse
+import os
 import csv
 import logging
 import sys
@@ -418,10 +419,13 @@ def main():
     parser.add_argument('--url', default='http://localhost:8069', help='Odoo server URL')
     parser.add_argument('--db', default='odoo_master', help='Database name')
     parser.add_argument('--user', default='admin', help='Odoo username')
-    parser.add_argument('--password', required=True, help='Odoo password')
+    parser.add_argument('--password', default=os.environ.get('ODOO_PASSWORD'),
+                       help='Odoo password (or set ODOO_PASSWORD env var)')
     parser.add_argument('--dry-run', action='store_true', help='Dry run mode (no actual changes)')
 
     args = parser.parse_args()
+    if not args.password:
+        parser.error("--password is required (or set ODOO_PASSWORD environment variable)")
 
     try:
         importer = BulkCPLImporter(args.url, args.db, args.user, args.password)
