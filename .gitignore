@@ -6,6 +6,7 @@ _build/
 !.gitattributes
 !.gitignore
 !.github
+!.dockerignore
 !.mailmap
 !.weblate.json
 # compiled python files
@@ -94,3 +95,14 @@ addons/tenant_templates/jewelry_template/import/*.csv
 addons/tenant_templates/supplier/
 # Claude temp files
 tmpclaude-*-cwd
+
+# Sensitive files (defense-in-depth)
+.env*.local
+*.pem
+*.key
+*.secret
+credentials.json
+oauth_creds.json
+secrets.json
+id_rsa
+id_ed25519
