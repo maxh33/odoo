@@ -335,8 +335,7 @@ class JewelryPricing(models.Model):
     @api.model
     def create(self, vals):
         """Set tenant_id on create"""
-        # TODO: Implement proper tenant isolation
-        # For now, use company_id as a proxy
+        # Default tenant for this database (tenant isolation is at PostgreSQL DB level)
         if 'tenant_id' not in vals:
             vals['tenant_id'] = 1  # Default tenant
 

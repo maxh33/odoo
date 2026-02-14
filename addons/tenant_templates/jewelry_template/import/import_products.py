@@ -5,6 +5,7 @@ Main script for importing products from Bling CSV export to Odoo
 """
 
 import argparse
+import os
 import csv
 import logging
 import sys
@@ -178,7 +179,7 @@ def get_parent_product_info(row, all_csv_products):
 class OdooProductImporter:
     """Import products from Bling CSV to Odoo via XML-RPC"""
 
-    def __init__(self, url, database, username, password):
+    def __init__(self, url, database, username, password, skip_updates=False):
         """
         Initialize Odoo connection
 
@@ -187,11 +188,13 @@ class OdooProductImporter:
             database (str): Database name
             username (str): Odoo username
             password (str): Odoo password
+            skip_updates (bool): If True, skip updating existing products (only create new ones)
         """
         self.url = url
         self.database = database
         self.username = username
         self.password = password
+        self.skip_updates = skip_updates
 
         # XML-RPC endpoints
         self.common = xmlrpc.client.ServerProxy(f'{url}/xmlrpc/2/common')
@@ -253,6 +256,79 @@ class OdooProductImporter:
         except Exception as e:
             _logger.error(f"XML-RPC error: {model}.{method} - {e}")
             raise
+
+    def sanitize_external_id(self, sku):
+        """
+        Sanitize SKU for use in External ID names.
+        External IDs cannot contain spaces or special characters.
+
+        Args:
+            sku (str): Product SKU (may contain spaces or special chars)
+
+        Returns:
+            str: Sanitized SKU safe for External ID usage
+        """
+        # Replace spaces and other problematic characters with underscores
+        return sku.replace(" ", "_").replace("/", "_").replace("\\", "_")
+
+    def get_or_create_external_id(self, model, res_id, name):
+        """
+        Create or update External ID for a record.
+        External IDs enable Odoo-standard import/export workflows.
+
+        Args:
+            model (str): Odoo model name (e.g., 'product.template')
+            res_id (int): Record ID
+            name (str): External ID name (e.g., 'product_template_C1010')
+
+        Returns:
+            int: External ID record ID
+        """
+        # Check if External ID already exists
+        ext_id_search = self.execute('ir.model.data', 'search', [
+            ('module', '=', 'jewelry_import'),
+            ('name', '=', name),
+            ('model', '=', model),
+        ])
+
+        if ext_id_search:
+            # Update existing External ID (in case res_id changed)
+            self.execute('ir.model.data', 'write', [ext_id_search[0]], {
+                'res_id': res_id,
+            })
+            return ext_id_search[0]
+        else:
+            # Create new External ID
+            return self.execute('ir.model.data', 'create', {
+                'name': name,
+                'module': 'jewelry_import',
+                'model': model,
+                'res_id': res_id,
+            })
+
+    def find_by_external_id(self, model, name):
+        """
+        Find record by External ID.
+
+        Args:
+            model (str): Odoo model name
+            name (str): External ID name
+
+        Returns:
+            int or False: Record ID if found, False otherwise
+        """
+        ext_id_search = self.execute('ir.model.data', 'search', [
+            ('module', '=', 'jewelry_import'),
+            ('name', '=', name),
+            ('model', '=', model),
+        ])
+
+        if ext_id_search:
+            ext_id_data = self.execute('ir.model.data', 'read', [ext_id_search[0]], ['res_id'])
+            if ext_id_data and len(ext_id_data) > 0:
+                return ext_id_data[0]['res_id']
+
+        return False
 
     def read_csv(self, csv_path):
         """
@@ -543,17 +619,43 @@ class OdooProductImporter:
                 })
                 return False
 
-            # Check for duplicates
+            # Check for duplicates using External ID first, then SKU fallback
+            ext_id_name = f'product_template_{self.sanitize_external_id(sku)}'
+            existing_id = self.find_by_external_id('product.template', ext_id_name)
+
+            if existing_id:
+                if self.skip_updates:
+                    # Skip updating existing products (debugging mode)
+                    _logger.info(f"  {sku}: Found by External ID, skipping (--skip-updates enabled)")
+                    self.stats['duplicates'] += 1
+                    return False
+                else:
+                    # Found by External ID - update with CSV data (CSV always wins)
+                    _logger.info(f"  {sku}: Found by External ID, updating")
+                    self.update_product(existing_id, cleaned_data)
+                    self.stats['duplicates'] += 1
+                    return False
+
+            # Fallback: Search by default_code for products without External ID
             existing = self.execute('product.template', 'search', [
                 ('default_code', '=', sku)
             ])
 
             if existing:
-                _logger.info(f"  {sku}: Already exists, skipping")
-                self.stats['duplicates'] += 1
-                return False
+                if self.skip_updates:
+                    # Skip updating existing products (debugging mode)
+                    _logger.info(f"  {sku}: Found by SKU, skipping (--skip-updates enabled)")
+                    self.stats['duplicates'] += 1
+                    return False
+                else:
+                    # Found by SKU - register External ID and update
+                    _logger.info(f"  {sku}: Found by SKU, registering External ID and updating")
+                    self.get_or_create_external_id('product.template', existing[0], ext_id_name)
+                    self.update_product(existing[0], cleaned_data)
+                    self.stats['duplicates'] += 1
+                    return False
 
-            # Create product
+            # Create new product
             product_id = self.create_product(cleaned_data)
 
             if product_id:
@@ -664,6 +766,12 @@ class OdooProductImporter:
 
             product_id = self.execute('product.template', 'create', product_vals)
 
+            # Register External ID for the new product
+            if product_id:
+                ext_id_name = f'product_template_{self.sanitize_external_id(product_data["default_code"])}'
+                self.get_or_create_external_id('product.template', product_id, ext_id_name)
+                _logger.debug(f"    Registered External ID: {ext_id_name}")
+
             # Create jewelry pricing record if jewelry
             if product_data.get('is_jewelry') and product_id:
                 pricing_vals = {
@@ -691,6 +799,140 @@ class OdooProductImporter:
 
         except Exception as e:
             _logger.error(f"Failed to create product {product_data.get('default_code')}: {e}")
+            return False
+
+    def update_product(self, product_id, product_data):
+        """
+        Update existing product in Odoo with CSV data (CSV always wins).
+
+        Args:
+            product_id (int): Existing product ID
+            product_data (dict): Validated product data from CSV
+
+        Returns:
+            bool: True if successful
+        """
+        try:
+            # Build update values (CSV data takes precedence)
+            update_vals = {}
+
+            # Update core fields
+            if product_data.get('name'):
+                update_vals['name'] = product_data['name']
+            if product_data.get('list_price') is not None:
+                update_vals['list_price'] = product_data['list_price']
+            if product_data.get('description'):
+                update_vals['description'] = product_data['description']
+            if product_data.get('description_sale'):
+                update_vals['description_sale'] = product_data['description_sale']
+
+            # Update barcode
+            if product_data.get('barcode'):
+                update_vals['barcode'] = product_data['barcode']
+
+            # Update logistics fields
+            if product_data.get('weight'):
+                update_vals['weight'] = product_data['weight']
+            if product_data.get('volume'):
+                update_vals['volume'] = product_data['volume']
+            if product_data.get('sale_delay'):
+                update_vals['sale_delay'] = product_data['sale_delay']
+
+            # Update category
+            if product_data.get('categ_id'):
+                update_vals['categ_id'] = product_data['categ_id']
+
+            # Update jewelry fields
+            if product_data.get('is_jewelry'):
+                update_vals['is_jewelry'] = True
+                if product_data.get('material_type'):
+                    update_vals['material_type'] = product_data['material_type']
+                if product_data.get('metal_purity'):
+                    update_vals['metal_purity'] = product_data['metal_purity']
+                if product_data.get('metal_weight_grams'):
+                    update_vals['metal_weight_grams'] = product_data['metal_weight_grams']
+
+            # Execute update
+            if update_vals:
+                self.execute('product.template', 'write', [product_id], update_vals)
+                _logger.debug(f"    Updated product with {len(update_vals)} fields from CSV")
+
+            # Update jewelry pricing if applicable
+            if product_data.get('is_jewelry'):
+                # Check if pricing record exists
+                product_read = self.execute('product.template', 'read', [product_id], ['jewelry_pricing_id'])
+
+                if product_read and product_read[0].get('jewelry_pricing_id'):
+                    pricing_id = product_read[0]['jewelry_pricing_id'][0]
+                    pricing_update = {}
+
+                    if product_data.get('provider_indice'):
+                        pricing_update['provider_indice'] = product_data['provider_indice']
+                    if product_data.get('markup_percentage'):
+                        pricing_update['markup_percentage'] = product_data['markup_percentage']
+
+                    if not product_data.get('metal_weight_grams'):
+                        pricing_update['use_manual_override'] = True
+                        pricing_update['manual_override_price_brl'] = product_data['list_price']
+
+                    if pricing_update:
+                        self.execute('joiasmax.jewelry.pricing', 'write', [pricing_id], pricing_update)
+
+            return True
+
+        except Exception as e:
+            _logger.error(f"Failed to update product {product_data.get('default_code')}: {e}")
+            return False
+
+    def update_existing_variant(self, variant_product_id, variant_dict):
+        """
+        Update existing product variant with latest CSV data.
+        CSV data always takes precedence over database values.
+
+        Args:
+            variant_product_id (int): Existing product.product ID
+            variant_dict (dict): Variant data from CSV with keys:
+                - sku: Full variant SKU
+                - barcode: Product barcode
+                - weight: Product weight
+                - price: Product price
+                - html_desc: HTML description
+
+        Returns:
+            bool: True if successful
+        """
+        try:
+            update_vals = {}
+
+            # SKU (CSV always wins)
+            if variant_dict.get('sku'):
+                update_vals['default_code'] = variant_dict['sku']
+
+            # Barcode (CSV always wins - overwrite even if different)
+            if variant_dict.get('barcode'):
+                update_vals['barcode'] = variant_dict['barcode']
+
+            # Weight (CSV always wins)
+            if variant_dict.get('weight'):
+                update_vals['weight'] = variant_dict['weight']
+
+            # Price (CSV always wins)
+            if variant_dict.get('price'):
+                update_vals['list_price'] = variant_dict['price']
+
+            # Description (CSV always wins)
+            if variant_dict.get('html_desc'):
+                update_vals['description_sale'] = variant_dict['html_desc']
+
+            if update_vals:
+                self.execute('product.product', 'write', [variant_product_id], update_vals)
+                _logger.debug(f"      Updated variant {variant_dict.get('size', '')} with {len(update_vals)} fields from CSV")
+                return True
+
+            return False
+
+        except Exception as e:
+            _logger.error(f"      Failed to update variant {variant_dict.get('sku', '')}: {e}")
             return False
 
     def get_or_create_attribute(self, attr_name):
@@ -786,31 +1028,106 @@ class OdooProductImporter:
 
         for base_sku, variants in self.variant_data.items():
             try:
-                # Find base product template
-                template_ids = self.execute('product.template', 'search', [
-                    ('default_code', '=', base_sku)
-                ])
+                # Find base product template using External ID first (same logic as process_product)
+                ext_id_name = f'product_template_{self.sanitize_external_id(base_sku)}'
+                template_id = self.find_by_external_id('product.template', ext_id_name)
 
-                if not template_ids:
-                    _logger.warning(f"  Base product not found: {base_sku}, skipping variants")
-                    continue
+                if not template_id:
+                    # Fallback: Search by default_code
+                    template_ids = self.execute('product.template', 'search', [
+                        ('default_code', '=', base_sku)
+                    ])
 
-                template_id = template_ids[0]
+                    if not template_ids:
+                        _logger.warning(f"  Base product not found: {base_sku}, skipping variants")
+                        continue
+
+                    template_id = template_ids[0]
+                    # Register External ID for future imports
+                    self.get_or_create_external_id('product.template', template_id, ext_id_name)
+                    _logger.debug(f"    Registered External ID for template: {ext_id_name}")
 
                 # Determine attribute type
                 size_values = [v['size'] for v in variants]
                 attr_type = detect_attribute_type(size_values)
 
-                _logger.info(f"  {base_sku}: Creating {len(variants)} variants (attribute: {attr_type})")
+                # Check which variants already exist
+                existing_variants = []
+                missing_variants = []
+                updated_count = 0
+
+                for variant in variants:
+                    variant_sku = variant['sku']
+                    variant_ext_id = f'product_variant_{self.sanitize_external_id(variant_sku)}'
+
+                    # Check if variant exists by External ID
+                    existing_variant_id = self.find_by_external_id('product.product', variant_ext_id)
+
+                    if existing_variant_id:
+                        # Verify this variant belongs to THIS template, not another duplicate
+                        variant_data = self.execute('product.product', 'read', [existing_variant_id], ['product_tmpl_id'])
+                        if variant_data and variant_data[0]['product_tmpl_id'][0] == template_id:
+                            # Variant belongs to this template
+                            existing_variants.append(variant_sku)
+                            if not self.skip_updates:
+                                # Update existing variant (CSV always wins)
+                                self.update_existing_variant(existing_variant_id, variant)
+                                updated_count += 1
+                        else:
+                            # Variant belongs to different template - create new one for this template
+                            _logger.debug(f"      Variant {variant_sku} exists but belongs to different template, creating new")
+                            missing_variants.append(variant)
+                    else:
+                        # Check by SKU as fallback
+                        existing = self.execute('product.product', 'search', [
+                            ('default_code', '=', variant_sku)
+                        ])
+
+                        if existing:
+                            # Verify this variant belongs to THIS template
+                            variant_data = self.execute('product.product', 'read', [existing[0]], ['product_tmpl_id'])
+                            if variant_data and variant_data[0]['product_tmpl_id'][0] == template_id:
+                                # Variant belongs to this template
+                                existing_variants.append(variant_sku)
+                                if not self.skip_updates:
+                                    # Register External ID for existing variant
+                                    self.get_or_create_external_id('product.product', existing[0], variant_ext_id)
+                                    # Update variant
+                                    self.update_existing_variant(existing[0], variant)
+                                    updated_count += 1
+                            else:
+                                # Variant belongs to different template - create new one for this template
+                                _logger.debug(f"      Variant {variant_sku} exists but belongs to different template, creating new")
+                                missing_variants.append(variant)
+                        else:
+                            # Variant needs to be created
+                            missing_variants.append(variant)
+
+                if self.skip_updates:
+                    _logger.info(f"  {base_sku}: {len(existing_variants)} variants exist (skipped), {len(missing_variants)} need creation")
+                else:
+                    _logger.info(f"  {base_sku}: {len(existing_variants)} variants exist (updating), {len(missing_variants)} need creation")
+
+                # If all variants exist, skip creation
+                if len(missing_variants) == 0:
+                    if self.skip_updates:
+                        _logger.info(f"    ✓ Skipped {len(existing_variants)} existing variants (--skip-updates enabled)")
+                    else:
+                        _logger.info(f"    ✓ Updated {updated_count} existing variants")
+                    created_count += 1
+                    continue
+
+                # Create missing variants by linking attributes
+                _logger.info(f"    Creating {len(missing_variants)} missing variants...")
 
                 # Get or create attribute
                 attr_id = self.get_or_create_attribute(attr_type)
                 if not attr_id:
                     continue
 
-                # Create attribute values
+                # Create attribute values for missing variants
                 value_ids = []
-                for variant in variants:
+                for variant in missing_variants:
                     value_id = self.get_or_create_attribute_value(attr_id, variant['size'])
                     if value_id:
                         value_ids.append(value_id)
@@ -836,19 +1153,24 @@ class OdooProductImporter:
                 if template_data and len(template_data) > 0 and template_data[0].get('product_variant_ids'):
                     variant_product_ids = template_data[0]['product_variant_ids']
 
-                    # Update variant-specific data (barcode, weight, price)
+                    # Update newly created variant-specific data (barcode, weight, price, SKU)
+                    # Only process the missing_variants that were just created
                     for variant_product_id in variant_product_ids:
                         # Read variant to get attribute value
-                        variant_data_read = self.execute('product.product', 'read', [variant_product_id], ['product_template_attribute_value_ids', 'barcode', 'weight', 'list_price'])
+                        variant_data_read = self.execute('product.product', 'read', [variant_product_id], ['product_template_attribute_value_ids', 'default_code'])
 
                         if not variant_data_read or len(variant_data_read) == 0:
                             continue
 
                         variant_info = variant_data_read[0]
 
+                        # Skip variants that already have SKU (existing ones we already updated)
+                        if variant_info.get('default_code'):
+                            continue
+
                         # Get attribute value from variant
-                        # Find matching size in our variant data
-                        for variant_dict in variants:
+                        # Find matching size in our missing_variant data
+                        for variant_dict in missing_variants:
                             # We need to match the size value to the variant
                             # Read the attribute value name
                             if variant_info.get('product_template_attribute_value_ids'):
@@ -861,21 +1183,16 @@ class OdooProductImporter:
                                     if pav_id:
                                         pav_data = self.execute('product.attribute.value', 'read', [pav_id[0]], ['name'])
                                         if pav_data and len(pav_data) > 0 and pav_data[0]['name'] == variant_dict['size']:
-                                            # Found matching variant!
-                                            update_vals = {}
+                                            # Found matching newly created variant!
+                                            # Update with CSV data
+                                            self.update_existing_variant(variant_product_id, variant_dict)
 
-                                            if variant_dict.get('barcode'):
-                                                update_vals['barcode'] = variant_dict['barcode']
-                                            if variant_dict.get('weight'):
-                                                update_vals['weight'] = variant_dict['weight']
-                                            if variant_dict.get('price'):
-                                                update_vals['list_price'] = variant_dict['price']
+                                            # Register External ID for new variant
+                                            variant_ext_id = f'product_variant_{self.sanitize_external_id(variant_dict["sku"])}'
+                                            self.get_or_create_external_id('product.product', variant_product_id, variant_ext_id)
+                                            _logger.debug(f"      Registered External ID: {variant_ext_id}")
 
-                                            if update_vals:
-                                                self.execute('product.product', 'write', [variant_product_id], update_vals)
-                                                _logger.debug(f"      Updated variant {variant_dict['size']}: barcode, weight, price")
-
-                    _logger.info(f"    ✓ Updated {len(variant_product_ids)} variant products")
+                    _logger.info(f"    ✓ Created and updated {len(missing_variants)} new variant products")
 
                 created_count += 1
 
@@ -958,8 +1275,11 @@ def main():
     parser.add_argument('--url', default='http://localhost:8069', help='Odoo server URL')
     parser.add_argument('--database', default='tenant_joiasmax', help='Odoo database name')
     parser.add_argument('--username', default='admin', help='Odoo username')
-    parser.add_argument('--password', default='admin', help='Odoo password')
+    parser.add_argument('--password', default=os.environ.get('ODOO_PASSWORD', 'admin'),
+                       help='Odoo password (or set ODOO_PASSWORD env var)')
     parser.add_argument('--output-dir', default='reports', help='Output directory for reports')
+    parser.add_argument('--skip-updates', action='store_true',
+                       help='Skip updating existing products (only create new ones) - useful for debugging')
 
     args = parser.parse_args()
 
@@ -969,7 +1289,8 @@ def main():
             url=args.url,
             database=args.database,
             username=args.username,
-            password=args.password
+            password=args.password,
+            skip_updates=args.skip_updates
         )
 
         # Run import

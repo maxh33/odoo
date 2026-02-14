@@ -1,0 +1,52 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Environment files
+.env
+.env.*
+.env.local
+.env*.local
+
+# Sensitive files
+*.pem
+*.key
+
+# Development files
+.vscode/
+.idea/
+
+# Import scripts and generated files (not needed in runtime)
+addons/tenant_templates/jewelry_template/import/
+addons/tenant_templates/supplier/
+addons/tenant_templates/products/
+
+# Backup and export files
+/backups/
+/exports/
+
+# Test and temporary files
+*.log
+*.tmp
+*.swp
+*~
+
+# Node modules
+node_modules/
+
+# Docker volumes
+odoo_data/
+odoo_postgres_data/

@@ -4,31 +4,8 @@
         <!-- CPL Ring Size Weight Adjustment Table -->
         <!-- Formula: final_weight = base_weight × COEF × adjustment_factor -->
         <!-- Reference size: 20 (factor = 1.0000) -->
-
-        <record id="size_adj_1" model="joiasmax.size.weight.adjustment">
-            <field name="size_number">1</field>
-            <field name="adjustment_factor">0.6833</field>
-        </record>
-
-        <record id="size_adj_2" model="joiasmax.size.weight.adjustment">
-            <field name="size_number">2</field>
-            <field name="adjustment_factor">0.7000</field>
-        </record>
-
-        <record id="size_adj_3" model="joiasmax.size.weight.adjustment">
-            <field name="size_number">3</field>
-            <field name="adjustment_factor">0.7166</field>
-        </record>
-
-        <record id="size_adj_4" model="joiasmax.size.weight.adjustment">
-            <field name="size_number">4</field>
-            <field name="adjustment_factor">0.7333</field>
-        </record>
-
-        <record id="size_adj_5" model="joiasmax.size.weight.adjustment">
-            <field name="size_number">5</field>
-            <field name="adjustment_factor">0.7500</field>
-        </record>
+        <!-- ONLY SIZES 6-50: Sizes 1-5 excluded per user requirement (not useful) -->
+        <!-- Total records: 45 size entries -->
 
         <record id="size_adj_6" model="joiasmax.size.weight.adjustment">
             <field name="size_number">6</field>
